@@ -37,7 +37,6 @@ function CameraController({
   trajectories: Trajectory[];
   radius: number;
 }) {
-  const controlsRef = useRef<any>(null);
   const { camera } = useThree();
 
   const targetPosRef = useRef(new THREE.Vector3(0, 0, 5.5));

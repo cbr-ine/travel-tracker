@@ -44,7 +44,9 @@ function formatDate(dateStr: string): string {
 // ─── Main Page ───
 
 export default function Home() {
-  const { theme, setTheme } = useTheme();
+  const { theme, resolvedTheme, setTheme } = useTheme();
+  // Use resolvedTheme for isDark to handle hydration mismatch (theme can be undefined initially)
+  const isDark = resolvedTheme === 'dark';
   const {
     trajectories,
     isLoading,
@@ -219,7 +221,7 @@ export default function Home() {
                     placeholder="搜索轨迹、地点..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="h-9 pl-8 text-sm bg-neutral-50 border-neutral-200 focus:bg-white"
+                    className="h-9 pl-8 text-sm bg-neutral-50 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 focus:bg-white dark:focus:bg-neutral-700"
                   />
                   {searchQuery && (
                     <button
@@ -238,16 +240,16 @@ export default function Home() {
               </div>
               {/* Stats */}
               <div className="px-5 pb-3 flex gap-2.5">
-                <div className="flex-1 bg-neutral-50 rounded-lg p-2.5 text-center">
-                  <div className="text-lg font-bold text-neutral-800">{trajectories.length}</div>
+                <div className="flex-1 bg-neutral-50 dark:bg-neutral-800 rounded-lg p-2.5 text-center">
+                  <div className="text-lg font-bold text-neutral-800 dark:text-neutral-200">{trajectories.length}</div>
                   <div className="text-[10px] text-neutral-400 uppercase tracking-wider">轨迹</div>
                 </div>
-                <div className="flex-1 bg-neutral-50 rounded-lg p-2.5 text-center">
-                  <div className="text-lg font-bold text-neutral-800">{totalLocations}</div>
+                <div className="flex-1 bg-neutral-50 dark:bg-neutral-800 rounded-lg p-2.5 text-center">
+                  <div className="text-lg font-bold text-neutral-800 dark:text-neutral-200">{totalLocations}</div>
                   <div className="text-[10px] text-neutral-400 uppercase tracking-wider">地点</div>
                 </div>
-                <div className="flex-1 bg-neutral-50 rounded-lg p-2.5 text-center">
-                  <div className="text-lg font-bold text-neutral-800 text-xs">
+                <div className="flex-1 bg-neutral-50 dark:bg-neutral-800 rounded-lg p-2.5 text-center">
+                  <div className="text-lg font-bold text-neutral-800 dark:text-neutral-200 text-xs">
                     {globalDistance > 0 ? `${(globalDistance / 1000).toFixed(1)}k` : '0'}
                   </div>
                   <div className="text-[10px] text-neutral-400 uppercase tracking-wider">km</div>
@@ -274,8 +276,8 @@ export default function Home() {
                         onClick={() => handleSidebarTrajectoryClick(t)}
                         className={`w-full text-left px-3 py-3 rounded-xl transition-colors group ${
                           focusTrajectoryId === t.id
-                            ? 'bg-neutral-100'
-                            : 'hover:bg-neutral-50'
+                            ? 'bg-neutral-100 dark:bg-neutral-800'
+                            : 'hover:bg-neutral-50 dark:hover:bg-neutral-800'
                         }`}
                       >
                         <div className="flex items-start gap-3">
@@ -284,7 +286,7 @@ export default function Home() {
                             style={{ backgroundColor: t.color, ringColor: t.color + '30' }}
                           />
                           <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm text-neutral-800 truncate">
+                            <div className="font-medium text-sm text-neutral-800 dark:text-neutral-200 truncate">
                               {t.name}
                             </div>
                             <div className="flex items-center gap-3 mt-1">
@@ -385,7 +387,7 @@ export default function Home() {
             variant="outline"
             size="icon"
             className="h-10 w-10 rounded-xl border-neutral-200 bg-white/80 dark:bg-neutral-900/80 dark:border-neutral-700 backdrop-blur-sm shadow-sm hover:bg-neutral-50 dark:hover:bg-neutral-800"
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
           >
             <Sun className="h-4 w-4 text-neutral-700 dark:hidden" />
             <Moon className="h-4 w-4 text-neutral-300 hidden dark:block" />
@@ -415,7 +417,7 @@ export default function Home() {
             onTrajectoryClick={handleMapTrajectoryClick}
             focusTrajectoryId={focusTrajectoryId}
             className="w-full h-full"
-            isDark={theme === 'dark'}
+            isDark={isDark}
           />
         </div>
         <div
@@ -427,7 +429,7 @@ export default function Home() {
             onTrajectoryClick={handleMapTrajectoryClick}
             focusTrajectoryId={focusTrajectoryId}
             className="w-full h-full"
-            isDark={theme === 'dark'}
+            isDark={isDark}
           />
         </div>
 
@@ -547,27 +549,27 @@ export default function Home() {
 
                 {/* Stats row */}
                 <div className="flex items-center gap-3 mt-3">
-                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-neutral-50 rounded-lg">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-neutral-50 dark:bg-neutral-800 rounded-lg">
                     <Route className="h-3.5 w-3.5 text-emerald-600" />
-                    <span className="text-xs font-medium text-neutral-700">
+                    <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
                       {formatDistance(detailStats.distance)}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-neutral-50 rounded-lg">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-neutral-50 dark:bg-neutral-800 rounded-lg">
                     <Clock className="h-3.5 w-3.5 text-amber-600" />
-                    <span className="text-xs font-medium text-neutral-700">
+                    <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
                       {formatDuration(detailStats.days)}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-neutral-50 rounded-lg">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-neutral-50 dark:bg-neutral-800 rounded-lg">
                     <Navigation className="h-3.5 w-3.5 text-rose-600" />
-                    <span className="text-xs font-medium text-neutral-700">
+                    <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
                       {detailStats.avgPerDay > 0 ? formatDistance(detailStats.avgPerDay) + '/天' : '—'}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-neutral-50 rounded-lg">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-neutral-50 dark:bg-neutral-800 rounded-lg">
                     <MapPin className="h-3.5 w-3.5 text-violet-600" />
-                    <span className="text-xs font-medium text-neutral-700">
+                    <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
                       {detailTrajectory.locations.length} 地点
                     </span>
                   </div>
@@ -591,7 +593,7 @@ export default function Home() {
                         <div key={loc.id || idx} className="flex items-start gap-3">
                           <div className="flex flex-col items-center mt-0.5">
                             <div
-                              className="w-2.5 h-2.5 rounded-full border-2 border-white shadow-sm"
+                              className="w-2.5 h-2.5 rounded-full border-2 border-white dark:border-neutral-900 shadow-sm"
                               style={{ backgroundColor: detailTrajectory.color }}
                             />
                             {idx < detailTrajectory.locations.length - 1 && (
@@ -602,7 +604,7 @@ export default function Home() {
                             )}
                           </div>
                           <div className="flex-1 -mt-0.5">
-                            <div className="text-sm font-medium text-neutral-800">{loc.name}</div>
+                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">{loc.name}</div>
                             <div className="flex items-center gap-2 mt-0.5">
                               <span className="text-[10px] text-neutral-400 font-mono">
                                 {loc.lat.toFixed(4)}, {loc.lng.toFixed(4)}
