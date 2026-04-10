@@ -256,7 +256,7 @@ export default function TrajectoryFormDialog({
           <DialogTitle className="text-lg">
             {editingTrajectory ? '编辑轨迹' : '新建轨迹'}
           </DialogTitle>
-          <DialogDescription className="text-sm text-neutral-500">
+          <DialogDescription className="text-sm text-neutral-500 dark:text-neutral-400">
             在地球上记录你的旅行轨迹
           </DialogDescription>
         </DialogHeader>

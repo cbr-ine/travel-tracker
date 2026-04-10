@@ -326,7 +326,7 @@ export default function Home() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7 text-red-400 hover:text-red-500 hover:bg-red-50"
+                              className="h-7 w-7 text-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDelete(t.id);
@@ -458,11 +458,11 @@ export default function Home() {
             <Badge variant="secondary" className="font-mono text-xs px-2.5">
               {trajectories.length} 轨迹
             </Badge>
-            <div className="w-px h-3 bg-neutral-200" />
+            <div className="w-px h-3 bg-neutral-200 dark:bg-neutral-700" />
             <Badge variant="secondary" className="font-mono text-xs px-2.5">
               {totalLocations} 地点
             </Badge>
-            <div className="w-px h-3 bg-neutral-200" />
+            <div className="w-px h-3 bg-neutral-200 dark:bg-neutral-700" />
             <Badge variant="secondary" className="font-mono text-xs px-2.5">
               {formatDistance(globalDistance)}
             </Badge>
@@ -528,7 +528,7 @@ export default function Home() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-red-400 hover:text-red-500 hover:bg-red-50"
+                      className="h-8 w-8 text-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950"
                       onClick={() => handleDelete(detailTrajectory.id)}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
