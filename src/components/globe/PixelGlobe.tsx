@@ -1,7 +1,10 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { Trajectory } from './TrajectoryLayer';
+
+// ─── Re-export types from TrajectoryLayer to avoid duplication ───
+export type { Trajectory, TrajectoryPoint } from './TrajectoryLayer';
+import type { Trajectory } from './TrajectoryLayer';
 
 // ─── Lazy load the entire Three.js scene to avoid SSR issues ───
 
@@ -18,23 +21,6 @@ const GlobeScene = dynamic(() => import('./GlobeScene'), {
     </div>
   ),
 });
-
-// ─── Types ───
-
-export interface TrajectoryPoint {
-  id: string;
-  name: string;
-  lat: number;
-  lng: number;
-  order: number;
-}
-
-export interface Trajectory {
-  id: string;
-  name: string;
-  color: string;
-  locations: TrajectoryPoint[];
-}
 
 export interface PixelGlobeProps {
   trajectories?: Trajectory[];

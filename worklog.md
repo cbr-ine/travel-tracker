@@ -594,3 +594,51 @@ Stage Summary:
 - Dev config improved: cross-origin warning suppressed
 - All 15 prior task fixes confirmed intact
 - Zero new lint errors introduced
+
+---
+Task ID: 16
+Agent: Main Agent (Cron Review #10)
+Task: Tenth comprehensive review — type deduplication, dark mode scrollbar, stability audit
+
+Work Log:
+**Review Findings:**
+1. Three.js NaN guards: All still comprehensive and correct across DotMatrixGlobe (parallel vector guard at poles, isFinite on positions, Math.max count guard, computeBoundingSphere), TrajectoryLayer (isFinite validation, null geometry guard, outwardRotation parallel vector guard), GlobeScene. No new NaN risks.
+2. Dev Log: App compiling cleanly. GET / and GET /api/trajectories returning 200 consistently. Server restarted cleanly after next.config.ts change. No runtime errors.
+3. Lint: Clean — only pre-existing errors in download/generate-prd.js (not app code).
+4. Dark Mode: 100% complete from Reviews #2-#7. No remaining gaps in components.
+5. Dark Mode CSS — SCROLLBAR GAP: globals.css scrollbar thumb uses light-mode oklch values (0.8/0.65) without `.dark` variant. In dark mode, scrollbar is nearly invisible against dark backgrounds.
+6. Code Duplication — PixelGlobe.tsx TYPE SHADOWING:
+   - `import { Trajectory } from './TrajectoryLayer'` on line 4 is unused (shadowed by local `export interface Trajectory` on line 32)
+   - Local `TrajectoryPoint` (lines 24-30) and `Trajectory` (lines 32-37) are identical to TrajectoryLayer's exported types
+   - Dead import + duplicate type declarations (~16 lines)
+7. Minor: `pointInPolygon()` identically implemented in both world-data.ts and FlatMap.tsx (private helpers, low priority)
+8. Performance: Dual-mounted views acceptable. No degradation.
+9. Architecture: All imports resolved, no broken components, all API routes functional.
+
+**Fixes Applied:**
+1. Deduplicated types in PixelGlobe.tsx:
+   - Removed unused `import { Trajectory } from './TrajectoryLayer'`
+   - Removed duplicate `TrajectoryPoint` and `Trajectory` interface declarations (~16 lines)
+   - Added `export type { Trajectory, TrajectoryPoint } from './TrajectoryLayer'` (re-export)
+   - Added `import type { Trajectory } from './TrajectoryLayer'` (for internal use)
+   - PixelGlobe reduced from 76 to 62 lines
+
+2. Added dark mode scrollbar to globals.css:
+   - `.dark ::-webkit-scrollbar-thumb { background: oklch(0.4 0 0); }`
+   - `.dark ::-webkit-scrollbar-thumb:hover { background: oklch(0.55 0 0); }`
+   - Scrollbar now visible in both light and dark modes
+
+**Assessment:**
+- Application extremely stable across 10 review rounds — diminishing returns
+- All Three.js NaN guards, dark mode, accessibility, and code quality remain intact
+- Type system now deduplicated across globe components
+- CSS dark mode truly complete including scrollbar
+- Application is a highly mature, production-ready pixel dot style travel trajectory tracker
+- Recommendation: Consider concluding automated reviews and focusing on feature development (PRD Phase 3: mobile responsiveness, performance optimization)
+
+Stage Summary:
+- 2 files modified: PixelGlobe.tsx (type deduplication), globals.css (dark scrollbar)
+- Type exports consolidated: PixelGlobe re-exports from TrajectoryLayer instead of duplicating
+- Dark mode scrollbar: now visible in both themes
+- All 16 prior task fixes confirmed intact
+- Zero new lint errors introduced
