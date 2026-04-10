@@ -290,3 +290,55 @@ Stage Summary:
 - All hardcoded colors replaced with theme-aware dynamic values
 - Zero new lint errors introduced
 - 8 actionable suggestions documented for next iteration
+
+---
+Task ID: 9
+Agent: Main Agent (Cron Review #3)
+Task: Third comprehensive review — dark mode completeness audit, code deduplication, unused imports
+
+Work Log:
+**Review Findings:**
+1. Three.js NaN guards: All still comprehensive and correct. No new NaN risks found across DotMatrixGlobe, TrajectoryLayer, GlobeScene.
+2. Dev Log: App compiling cleanly with `✓ Compiled` messages. All GET / and /api/trajectories returning 200. No current runtime errors.
+3. Lint: Clean — only pre-existing errors in download/generate-prd.js (not app code).
+4. Dark Mode — REMAINING GAP: StatisticsPanel completely missing dark mode classes:
+   - Panel background: `bg-white` without dark variant
+   - Backdrop: `bg-black/10` too subtle in dark mode
+   - Header text: `text-neutral-900` without dark variant
+   - Card borders: `border-neutral-100` without dark variant
+   - All text labels: `text-neutral-500`, `text-neutral-800`, `text-neutral-700` without dark variants
+   - Year distribution cards: `bg-neutral-50` without dark variant
+   - StatCard component: missing dark: classes for border and value text
+5. Layout body dark mode missing: `bg-white text-neutral-900` in layout.tsx body tag has no `dark:` variants
+6. Unused import: `Map` from lucide-react imported but not used in page.tsx
+7. Code Duplication: DotMatrixGlobe had ~180 lines of inline continent polygon data (CONTINENTS, pointInPolygon, isLandCheck) duplicating world-data.ts. FlatMap already uses shared `isLand` from world-data.ts.
+8. Performance: Both PixelGlobe and FlatMap remain dual-mounted with CSS opacity toggle. Acceptable — no performance degradation observed.
+
+**Fixes Applied:**
+1. StatisticsPanel full dark mode (StatisticsPanel.tsx):
+   - Panel background: `bg-white dark:bg-neutral-900`
+   - Backdrop: `bg-black/10 dark:bg-black/40`
+   - Header text: `text-neutral-900 dark:text-neutral-100`
+   - Card borders: `border-neutral-100 dark:border-neutral-800`
+   - All text labels: added `dark:text-neutral-400`, `dark:text-neutral-200`, `dark:text-neutral-300`
+   - Year distribution cards: `bg-neutral-50 dark:bg-neutral-800`, values: `dark:text-neutral-200`
+   - StatCard component: `border-neutral-100 dark:border-neutral-800`, value: `dark:text-neutral-100`
+   - Quick stats labels: all added dark variants
+   - Ranking bars: `bg-neutral-100 dark:bg-neutral-800`
+
+2. Layout body dark mode (layout.tsx):
+   - `bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100`
+
+3. Removed unused `Map` import from page.tsx
+
+4. Deduplicated globe land detection (DotMatrixGlobe.tsx):
+   - Removed ~180 lines of inline CONTINENTS, pointInPolygon, and isLandCheck
+   - Now imports shared `isLand` from `@/lib/world-data` (same as FlatMap)
+   - Both 3D globe and 2D flat map now use identical land detection
+
+Stage Summary:
+- 4 files modified: StatisticsPanel.tsx, layout.tsx, page.tsx, DotMatrixGlobe.tsx
+- Dark mode now 100% complete across all components (3D globe, 2D map, sidebar, detail panel, stats panel, form dialog, layout body)
+- Code deduplication: DotMatrixGlobe reduced from ~416 lines to ~207 lines
+- Zero new lint errors introduced
+- No remaining dark mode gaps identified

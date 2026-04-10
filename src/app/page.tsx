@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import {
-  MapPin, Plus, Menu, X, Trash2, Edit2, Calendar, Map,
+  MapPin, Plus, Menu, X, Trash2, Edit2, Calendar,
   Search, BarChart3, Globe2, LayoutGrid, Route, Clock,
   Navigation, ChevronRight, Sun, Moon,
 } from 'lucide-react';

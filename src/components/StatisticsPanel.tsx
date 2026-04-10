@@ -109,7 +109,7 @@ export default function StatisticsPanel({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/10 backdrop-blur-sm z-40"
+            className="fixed inset-0 bg-black/10 dark:bg-black/40 backdrop-blur-sm z-40"
             onClick={onClose}
           />
           {/* Panel */}
@@ -118,13 +118,13 @@ export default function StatisticsPanel({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 320 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="fixed right-0 top-0 bottom-0 w-[340px] sm:w-[380px] bg-white shadow-2xl z-50 flex flex-col"
+            className="fixed right-0 top-0 bottom-0 w-[340px] sm:w-[380px] bg-white dark:bg-neutral-900 shadow-2xl z-50 flex flex-col"
           >
             {/* Header */}
             <div className="px-5 pt-5 pb-3 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5 text-neutral-500" />
-                <h2 className="text-base font-semibold text-neutral-900">旅行统计</h2>
+                <h2 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">旅行统计</h2>
               </div>
               <Button
                 variant="ghost"
@@ -168,11 +168,11 @@ export default function StatisticsPanel({
                 </div>
 
                 {/* Quick stats */}
-                <Card className="border-neutral-100">
+                <Card className="border-neutral-100 dark:border-neutral-800">
                   <CardContent className="p-4 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-neutral-500">平均轨迹距离</span>
-                      <span className="text-sm font-medium text-neutral-800">
+                      <span className="text-sm text-neutral-500 dark:text-neutral-400">平均轨迹距离</span>
+                      <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                         {formatDistance(stats.avgDistance)}
                       </span>
                     </div>
@@ -180,13 +180,13 @@ export default function StatisticsPanel({
                     {stats.longest && (
                       <>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-neutral-500">最长轨迹</span>
+                          <span className="text-sm text-neutral-500 dark:text-neutral-400">最长轨迹</span>
                           <div className="flex items-center gap-2">
                             <div
                               className="w-2.5 h-2.5 rounded-full"
                               style={{ backgroundColor: stats.longest.color }}
                             />
-                            <span className="text-sm font-medium text-neutral-800 max-w-[140px] truncate">
+                            <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200 max-w-[140px] truncate">
                               {stats.longest.name}
                             </span>
                           </div>
@@ -197,16 +197,16 @@ export default function StatisticsPanel({
                     {stats.mostLocations && (
                       <>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-neutral-500">最多地点轨迹</span>
+                          <span className="text-sm text-neutral-500 dark:text-neutral-400">最多地点轨迹</span>
                           <div className="flex items-center gap-2">
                             <div
                               className="w-2.5 h-2.5 rounded-full"
                               style={{ backgroundColor: stats.mostLocations.color }}
                             />
-                            <span className="text-sm font-medium text-neutral-800 max-w-[140px] truncate">
+                            <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200 max-w-[140px] truncate">
                               {stats.mostLocations.name}
                             </span>
-                            <span className="text-xs text-neutral-400">
+                            <span className="text-xs text-neutral-400 dark:text-neutral-500">
                               ({stats.mostLocations.locations.length})
                             </span>
                           </div>
@@ -215,8 +215,8 @@ export default function StatisticsPanel({
                       </>
                     )}
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-neutral-500">日均行程</span>
-                      <span className="text-sm font-medium text-neutral-800">
+                      <span className="text-sm text-neutral-500 dark:text-neutral-400">日均行程</span>
+                      <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                         {stats.globalDays > 0
                           ? formatDistance(stats.globalDistance / stats.globalDays)
                           : '—'}
@@ -245,15 +245,15 @@ export default function StatisticsPanel({
                                 <span className="text-xs font-mono text-neutral-400 w-4 shrink-0">
                                   {idx + 1}
                                 </span>
-                                <span className="text-sm text-neutral-700 truncate">
+                                <span className="text-sm text-neutral-700 dark:text-neutral-300 truncate">
                                   {item.name}
                                 </span>
                               </div>
-                              <span className="text-xs font-mono text-neutral-500 shrink-0 ml-2">
+                              <span className="text-xs font-mono text-neutral-500 dark:text-neutral-400 shrink-0 ml-2">
                                 {formatDistance(item.distance)}
                               </span>
                             </div>
-                            <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                            <div className="h-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
                               <motion.div
                                 initial={{ width: 0 }}
                                 animate={{ width: `${pct}%` }}
@@ -282,9 +282,9 @@ export default function StatisticsPanel({
                       {stats.yearData.map((item) => (
                         <div
                           key={item.year}
-                          className="px-3 py-1.5 bg-neutral-50 rounded-lg text-center"
+                          className="px-3 py-1.5 bg-neutral-50 dark:bg-neutral-800 rounded-lg text-center"
                         >
-                          <div className="text-base font-bold text-neutral-800">
+                          <div className="text-base font-bold text-neutral-800 dark:text-neutral-200">
                             {item.count}
                           </div>
                           <div className="text-[10px] text-neutral-400 font-mono">
@@ -318,10 +318,10 @@ function StatCard({
   accent: string;
 }) {
   return (
-    <Card className="border-neutral-100 hover:shadow-sm transition-shadow">
+    <Card className="border-neutral-100 dark:border-neutral-800 hover:shadow-sm transition-shadow">
       <CardContent className="p-3">
         <div className={`mb-1.5 ${accent}`}>{icon}</div>
-        <div className="text-lg font-bold text-neutral-900 leading-none">{value}</div>
+        <div className="text-lg font-bold text-neutral-900 dark:text-neutral-100 leading-none">{value}</div>
         <div className="text-[10px] text-neutral-400 uppercase tracking-wider mt-1">
           {label}
         </div>
