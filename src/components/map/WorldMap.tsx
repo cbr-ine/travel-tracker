@@ -16,7 +16,7 @@ import type { Topology } from 'topojson-specification';
 
 interface WorldMapProps {
   visitedCountries: { code: string; name: string }[];
-  onToggleCountry: (code: string, name: string) => void;
+  onToggleCountry: (code: string, name: string, nameZh: string) => void;
   isDark?: boolean;
   className?: string;
 }
@@ -386,8 +386,9 @@ export default function WorldMap({
       const numericId = clickedFeature.id;
       const alpha2 = NUMERIC_TO_ALPHA2[numericId] || numericId;
       const countryName = clickedFeature.properties?.name || 'Unknown';
+      const chineseName = CHINESE_NAMES[alpha2] || '';
 
-      onToggleCountry(alpha2, countryName);
+      onToggleCountry(alpha2, countryName, chineseName);
     },
     [onToggleCountry]
   );

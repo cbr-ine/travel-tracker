@@ -154,7 +154,7 @@ export default function ChinaMap({
       setLoading(true);
       setError(null);
       try {
-        const data = await fetchGeoJSON('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json');
+        const data = await fetchGeoJSON('/api/china-geojson');
         if (!cancelled) {
           setGeoData(data);
           setLoading(false);

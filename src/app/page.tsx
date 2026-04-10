@@ -70,30 +70,31 @@ export default function Home() {
 
   // ─── World map toggle ───
   const handleToggleCountry = useCallback(
-    async (code: string, name: string) => {
+    async (code: string, name: string, nameZh: string) => {
       const isVisited = useTravelStore.getState().isCountryVisited(code);
+      const displayName = nameZh || name;
       if (isVisited) {
         // Remove
         try {
           const res = await fetch(`/api/countries/${code}`, { method: 'DELETE' });
           if (res.ok) {
             removeCountry(code);
-            toast.success(`已取消标记: ${name}`);
+            toast.success(`已取消标记: ${displayName}`);
           }
         } catch {
           toast.error('操作失败');
         }
       } else {
-        // Add - find Chinese name from WorldMap's CHINESE_NAMES
+        // Add
         const res = await fetch('/api/countries', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code, name, nameZh: '' }),
+          body: JSON.stringify({ code, name, nameZh: nameZh || '' }),
         });
         if (res.ok) {
           const data = await res.json();
           addCountry(data);
-          toast.success(`已标记: ${name}`);
+          toast.success(`已标记: ${displayName}`);
         } else {
           const err = await res.json();
           toast.error(err.error || '操作失败');
