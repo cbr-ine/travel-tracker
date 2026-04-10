@@ -123,7 +123,7 @@ export default function StatisticsPanel({
             {/* Header */}
             <div className="px-5 pt-5 pb-3 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
-                <BarChart3 className="h-4.5 w-4.5 text-neutral-500" />
+                <BarChart3 className="h-5 w-5 text-neutral-500" />
                 <h2 className="text-base font-semibold text-neutral-900">旅行统计</h2>
               </div>
               <Button

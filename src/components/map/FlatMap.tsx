@@ -1,8 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { latLngToFlat } from '@/lib/geo';
+import { useMemo, useState } from 'react';
 
 // ─── Types ───
 
@@ -112,8 +110,6 @@ export default function FlatMap({
   className = '',
 }: FlatMapProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [svgRef, setSvgRef] = useState<SVGSVGElement | null>(null);
-
   // Compute viewBox when a trajectory is focused
   const viewBox = useMemo(() => {
     if (focusTrajectoryId) {
@@ -138,14 +134,9 @@ export default function FlatMap({
     return '0 0 360 180';
   }, [focusTrajectoryId, trajectories]);
 
-  const handleResetView = useCallback(() => {
-    // viewBox is controlled by useMemo, so removing focus will reset
-  }, []);
-
   return (
     <div className={`relative w-full h-full overflow-hidden ${className}`}>
       <svg
-        ref={setSvgRef}
         viewBox={viewBox}
         className="w-full h-full"
         style={{ background: '#fafafa' }}

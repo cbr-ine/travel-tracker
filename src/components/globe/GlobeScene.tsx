@@ -25,7 +25,7 @@ function GlobeLoadingFallback() {
   );
 }
 
-// ─── Camera controller that smoothly zooms to a trajectory using useFrame ───
+// ─── Camera controller that smoothly zooms to a trajectory ───
 
 function CameraController({
   focusTrajectoryId,
@@ -36,16 +36,14 @@ function CameraController({
   trajectories: Trajectory[];
   radius: number;
 }) {
+  const controlsRef = useRef<any>(null);
   const { camera } = useThree();
-  const targetPosRef = useRef(new THREE.Vector3(0, 0, 5.5));
-  const targetLookAtRef = useRef(new THREE.Vector3(0, 0, 0));
-  // Store computed targets (non-ref state that triggers useEffect)
-  const computedTargetRef = useRef<{ pos: THREE.Vector3; lookAt: THREE.Vector3 }>({
-    pos: new THREE.Vector3(0, 0, 5.5),
-    lookAt: new THREE.Vector3(0, 0, 0),
-  });
 
-  // Compute target position when focus changes
+  const targetPosRef = useRef(new THREE.Vector3(0, 0, 5.5));
+  const isAnimating = useRef(false);
+  const animationProgress = useRef(0);
+
+  // Compute target when focus changes
   useEffect(() => {
     if (focusTrajectoryId) {
       const traj = trajectories.find((t) => t.id === focusTrajectoryId);
@@ -67,47 +65,42 @@ function CameraController({
         );
 
         const direction = centerPos.clone().normalize();
-        const zoomDistance = 4.2;
-        computedTargetRef.current = {
-          pos: direction.multiplyScalar(zoomDistance),
-          lookAt: centerPos,
-        };
+        targetPosRef.current = direction.multiplyScalar(4.2);
+        isAnimating.current = true;
+        animationProgress.current = 0;
       }
     } else {
-      computedTargetRef.current = {
-        pos: new THREE.Vector3(0, 0, 5.5),
-        lookAt: new THREE.Vector3(0, 0, 0),
-      };
+      // Smoothly return to default position
+      targetPosRef.current = new THREE.Vector3(0, 0, 5.5);
+      isAnimating.current = true;
+      animationProgress.current = 0;
     }
-
-    targetPosRef.current.copy(computedTargetRef.current.pos);
-    targetLookAtRef.current.copy(computedTargetRef.current.lookAt);
   }, [focusTrajectoryId, trajectories, radius]);
 
-  // Smooth interpolation each frame
-  useFrame(() => {
-    camera.position.lerp(targetPosRef.current, 0.04);
+  // Smooth camera movement each frame
+  useFrame((_, delta) => {
+    if (!isAnimating.current) return;
 
-    // Gradually rotate camera to look at target
-    const currentLookDir = new THREE.Vector3(0, 0, -1)
-      .applyQuaternion(camera.quaternion);
-    const desiredDir = targetLookAtRef.current.clone()
-      .sub(camera.position)
-      .normalize();
+    animationProgress.current += delta * 1.5; // ~0.67s animation
+    if (animationProgress.current >= 1) {
+      animationProgress.current = 1;
+      isAnimating.current = false;
+    }
 
-    const dot = currentLookDir.dot(desiredDir);
-    if (dot < 0.9999) {
-      const q = new THREE.Quaternion().setFromUnitVectors(
-        currentLookDir,
-        desiredDir
-      );
-      // Gentle rotation via slerp
-      q.slerp(new THREE.Quaternion(), 0.92);
-      camera.quaternion.premultiply(q);
+    const t = easeInOutCubic(animationProgress.current);
+    camera.position.lerp(targetPosRef.current, t * 0.12);
+
+    // Check if close enough to stop
+    if (camera.position.distanceTo(targetPosRef.current) < 0.05) {
+      isAnimating.current = false;
     }
   });
 
   return null;
+}
+
+function easeInOutCubic(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
 export default function GlobeScene({

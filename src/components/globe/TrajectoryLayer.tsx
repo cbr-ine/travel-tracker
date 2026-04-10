@@ -60,18 +60,17 @@ function outwardRotation(x: number, y: number, z: number): THREE.Euler {
   if (normal.lengthSq() < 1e-8) return new THREE.Euler();
   normal.normalize();
   const up = new THREE.Vector3(0, 1, 0);
-  // Handle edge case when normal is parallel to up
-  if (Math.abs(normal.dot(up)) > 0.9999) {
-    const altUp = new THREE.Vector3(0, 0, 1);
-    const quat = new THREE.Quaternion().setFromUnitVectors(up, altUp);
-    if (normal.y < 0) {
-      quat.setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI);
+  const dot = normal.dot(up);
+  // Handle edge case when normal is parallel or antiparallel to up
+  if (Math.abs(dot) > 0.9999) {
+    // If pointing up, no rotation needed; if pointing down, rotate 180° around Z
+    if (dot < 0) {
+      return new THREE.Euler(0, 0, Math.PI);
     }
-    return new THREE.Euler().setFromQuaternion(quat);
+    return new THREE.Euler(0, 0, 0);
   }
   const quat = new THREE.Quaternion().setFromUnitVectors(up, normal);
-  const euler = new THREE.Euler().setFromQuaternion(quat);
-  return euler;
+  return new THREE.Euler().setFromQuaternion(quat);
 }
 
 // ─── Component ───
