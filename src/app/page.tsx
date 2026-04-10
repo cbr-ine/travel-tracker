@@ -386,6 +386,7 @@ export default function Home() {
           <Button
             variant="outline"
             size="icon"
+            aria-label="切换主题"
             className="h-10 w-10 rounded-xl border-neutral-200 bg-white/80 dark:bg-neutral-900/80 dark:border-neutral-700 backdrop-blur-sm shadow-sm hover:bg-neutral-50 dark:hover:bg-neutral-800"
             onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
           >
@@ -397,6 +398,7 @@ export default function Home() {
           <Button
             variant="outline"
             size="icon"
+            aria-label="旅行统计"
             className="h-10 w-10 rounded-xl border-neutral-200 bg-white/80 dark:bg-neutral-900/80 dark:border-neutral-700 backdrop-blur-sm shadow-sm hover:bg-neutral-50 dark:hover:bg-neutral-800"
             onClick={() => setStatsPanelOpen(true)}
           >
@@ -478,6 +480,7 @@ export default function Home() {
       >
         <Button
           onClick={() => useTrajectoryStore.getState().setFormDialogOpen(true)}
+          aria-label="新建轨迹"
           className="h-14 w-14 rounded-full shadow-lg bg-neutral-900 hover:bg-neutral-800 text-white"
           size="icon"
         >
@@ -544,7 +547,7 @@ export default function Home() {
                   </div>
                 </div>
                 {detailTrajectory.note && (
-                  <p className="text-sm text-neutral-500 mt-2 leading-relaxed">{detailTrajectory.note}</p>
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-2 leading-relaxed">{detailTrajectory.note}</p>
                 )}
 
                 {/* Stats row */}
