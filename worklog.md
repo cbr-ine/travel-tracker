@@ -556,3 +556,41 @@ Stage Summary:
 - WCAG accessibility completion: all icon-only buttons have aria-labels
 - All 14 prior task fixes confirmed intact
 - Zero new lint errors introduced
+
+---
+Task ID: 15
+Agent: Main Agent (Cron Review #9)
+Task: Ninth comprehensive review — store dead state cleanup, dev config warning
+
+Work Log:
+**Review Findings:**
+1. Three.js NaN guards: All still comprehensive and correct across DotMatrixGlobe, TrajectoryLayer, GlobeScene. No new NaN risks.
+2. Dev Log: App compiling cleanly with `✓ Compiled` and `GET / 200` on all routes. Transient "Module not found" and "Badge is not defined" errors observed earlier in log were self-resolved via Fast Refresh full reload — not actual code bugs.
+3. Lint: Clean — only pre-existing errors in download/generate-prd.js (not app code).
+4. Dark Mode: 100% complete from Reviews #2-#7. No remaining gaps.
+5. Dead State in Store — `selectedTrajectoryId` and `setSelectedTrajectoryId` defined in store.ts but never consumed by any component. Also referenced in `removeTrajectory` action.
+6. Dead Actions in Store — `addTrajectory` and `updateTrajectory` defined in store interface and implementation but never called from any component (app always re-fetches from API after mutations).
+7. Config Warning — `⚠ Cross origin request detected from preview-chat-*.space.z.ai to /_next/*` — Next.js 16 requires explicit `allowedDevOrigins` config for cross-origin dev requests.
+8. Performance: Dual-mounted PixelGlobe + FlatMap with CSS opacity toggle remains acceptable.
+9. Architecture: All imports resolved, no broken components, all API routes functional.
+
+**Fixes Applied:**
+1. Removed dead state `selectedTrajectoryId` from store interface and implementation
+2. Removed dead action `setSelectedTrajectoryId` from store
+3. Cleaned up `removeTrajectory` action — removed dead `selectedTrajectoryId` reset logic
+4. Removed dead actions `addTrajectory` and `updateTrajectory` from store interface and implementation
+5. Added `allowedDevOrigins` to next.config.ts to suppress cross-origin dev warning
+
+**Assessment:**
+- Application extremely stable across 9 review rounds — only dead code cleanup and config fix needed
+- All Three.js NaN guards, dark mode, accessibility, and code quality remain intact
+- Store now contains only actively-used state and actions
+- Dev server cross-origin warning resolved
+- Application is a highly mature, production-ready pixel dot style travel trajectory tracker
+
+Stage Summary:
+- 2 files modified: store.ts (dead code removal), next.config.ts (allowedDevOrigins)
+- Store reduced: removed 1 dead state + 3 dead actions (~12 lines)
+- Dev config improved: cross-origin warning suppressed
+- All 15 prior task fixes confirmed intact
+- Zero new lint errors introduced
