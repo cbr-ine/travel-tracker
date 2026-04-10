@@ -14,13 +14,14 @@ interface GlobeSceneProps {
   radius?: number;
   autoRotate?: boolean;
   focusTrajectoryId?: string | null;
+  isDark?: boolean;
 }
 
 function GlobeLoadingFallback() {
   return (
     <mesh>
       <sphereGeometry args={[2, 16, 16]} />
-      <meshBasicMaterial color="#f5f5f5" wireframe />
+      <meshBasicMaterial color="#333333" wireframe />
     </mesh>
   );
 }
@@ -109,7 +110,15 @@ export default function GlobeScene({
   radius = 2,
   autoRotate = true,
   focusTrajectoryId,
+  isDark = false,
 }: GlobeSceneProps) {
+  const bgColor = isDark ? '#0a0a0a' : '#ffffff';
+  const dotColor = isDark ? '#e5e5e5' : '#1a1a1a';
+  const dotOpacity = isDark ? 0.7 : 0.85;
+  const wireColor = isDark ? '#1a1a1a' : '#e8e8e8';
+  const labelColor = isDark ? '#666666' : '#a0a0a0';
+  const labelShadow = isDark ? '0 0 4px rgba(0,0,0,0.8)' : '0 0 4px rgba(255,255,255,0.8)';
+
   return (
     <Canvas
       camera={{
@@ -130,14 +139,19 @@ export default function GlobeScene({
         touchAction: 'none',
       }}
     >
-      <color attach="background" args={['#ffffff']} />
-      <color attach="fog" args={['#ffffff']} />
+      <color attach="background" args={[bgColor]} />
+      <color attach="fog" args={[bgColor]} />
       <ambientLight intensity={1} />
 
       <Suspense fallback={<GlobeLoadingFallback />}>
         <DotMatrixGlobe
           radius={radius}
           autoRotateSpeed={autoRotate ? 0.15 : 0}
+          dotColor={dotColor}
+          dotOpacity={dotOpacity}
+          wireColor={wireColor}
+          labelColor={labelColor}
+          labelShadow={labelShadow}
         />
         <TrajectoryLayer
           trajectories={trajectories}

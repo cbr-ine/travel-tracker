@@ -11,6 +11,9 @@ interface DotMatrixGlobeProps {
   dotColor?: string;
   dotOpacity?: number;
   autoRotateSpeed?: number;
+  wireColor?: string;
+  labelColor?: string;
+  labelShadow?: string;
 }
 
 // ─── Continent label data: center coordinates ───
@@ -30,6 +33,9 @@ export default function DotMatrixGlobe({
   dotColor = '#1a1a1a',
   dotOpacity = 0.85,
   autoRotateSpeed = 0.15,
+  wireColor = '#e8e8e8',
+  labelColor = '#a0a0a0',
+  labelShadow = '0 0 4px rgba(255,255,255,0.8)',
 }: DotMatrixGlobeProps) {
   const groupRef = useRef<THREE.Group>(null);
 
@@ -59,7 +65,7 @@ export default function DotMatrixGlobe({
       <mesh>
         <sphereGeometry args={[radius * 0.998, 36, 36]} />
         <meshBasicMaterial
-          color="#e8e8e8"
+          color={wireColor}
           transparent
           opacity={0.025}
           wireframe
@@ -81,7 +87,7 @@ export default function DotMatrixGlobe({
           >
             <div
               style={{
-                color: '#a0a0a0',
+                color: labelColor,
                 fontSize: '8px',
                 fontWeight: 600,
                 letterSpacing: '0.08em',
@@ -89,7 +95,7 @@ export default function DotMatrixGlobe({
                 fontFamily: 'var(--font-geist-mono), monospace',
                 whiteSpace: 'nowrap',
                 opacity: 0.7,
-                textShadow: '0 0 4px rgba(255,255,255,0.8)',
+                textShadow: labelShadow,
               }}
             >
               {c.name}

@@ -251,7 +251,7 @@ export default function TrajectoryFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg sm:max-w-xl max-h-[85vh] p-0 overflow-hidden">
+      <DialogContent className="max-w-lg sm:max-w-xl max-h-[85vh] p-0 overflow-hidden bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800">
         <DialogHeader className="px-6 pt-6 pb-2">
           <DialogTitle className="text-lg">
             {editingTrajectory ? '编辑轨迹' : '新建轨迹'}
@@ -398,21 +398,21 @@ export default function TrajectoryFormDialog({
 
                     {/* Search results dropdown */}
                     {activeSearchIdx === idx && searchResults[idx]?.length > 0 && (
-                      <div className="absolute left-8 right-10 top-full z-50 bg-white border border-neutral-200 rounded-lg shadow-lg overflow-hidden">
+                      <div className="absolute left-8 right-10 top-full z-50 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-lg overflow-hidden">
                         {searchResults[idx].map((result, ri) => (
                           <button
                             key={ri}
                             type="button"
                             onClick={() => selectSearchResult(result, idx)}
-                            className="w-full text-left px-3 py-2 hover:bg-neutral-50 transition-colors border-b border-neutral-50 last:border-0"
+                            className="w-full text-left px-3 py-2 hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors border-b border-neutral-50 dark:border-neutral-700 last:border-0"
                           >
                             <div className="flex items-center gap-2">
                               <MapPin className="h-3 w-3 text-neutral-400 shrink-0" />
                               <div className="min-w-0">
-                                <div className="text-sm text-neutral-800 truncate">
+                                <div className="text-sm text-neutral-800 dark:text-neutral-200 truncate">
                                   {result.display_name.split(',')[0]}
                                 </div>
-                                <div className="text-[10px] text-neutral-400 truncate">
+                                <div className="text-[10px] text-neutral-400 dark:text-neutral-500 truncate">
                                   {result.display_name}
                                 </div>
                               </div>

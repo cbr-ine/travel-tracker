@@ -212,3 +212,81 @@ Stage Summary:
 - Dark mode now fully functional with toggle
 - FlatMap geographic accuracy significantly improved
 - Globe rendering no longer unmounts on view switch
+
+---
+Task ID: 8
+Agent: Main Agent (Cron Review #2)
+Task: Second comprehensive review — dark mode visual completeness, code quality, performance audit
+
+Work Log:
+**Review Findings:**
+1. Three.js NaN guards: All comprehensive (DotMatrixGlobe parallel vector guard, isFinite() on all positions, Math.max count guard, explicit computeBoundingSphere). No new NaN risks found.
+2. Dark Mode — CRITICAL GAP: Dark mode toggle was added in previous review but 3D globe, flat map, and form dialog had hardcoded light-mode colors:
+   - GlobeScene: background #ffffff, fog #ffffff, dot color #1a1a1a (invisible on dark bg)
+   - FlatMap: SVG background #fafafa, grid #e5e5e5, land fill #d4d4d4, dot stroke "white"
+   - PixelGlobe loading spinner: bg-white without dark variant
+   - TrajectoryFormDialog: search dropdown bg-white, hover:bg-neutral-50 without dark variants
+   - DotMatrixGlobe: wireframe #e8e8e8, labels #a0a0a0 with white textShadow
+3. Performance: Both PixelGlobe and FlatMap mounted simultaneously (CSS opacity toggle) — hidden one still renders. Acceptable since SVG is lightweight and Three.js with frustumCulled=false only renders visible instances in camera frustum.
+4. Code Quality: Redundant ternary in store.ts setFormDialogOpen: `open ? null : null` → simplified to `null`
+5. Dev Log: Found transient "Module not found" and "Badge is not defined" errors from earlier session (resolved via Fast Refresh full reload). No current errors.
+6. Lint: Clean — only pre-existing errors in download/generate-prd.js
+
+**Fixes Applied:**
+1. Globe Scene dark mode (GlobeScene.tsx):
+   - Added `isDark` prop to GlobeSceneProps
+   - Dynamic background/fog colors: light=#ffffff, dark=#0a0a0a
+   - Dynamic dot color: light=#1a1a1a, dark=#e5e5e5 (inverted for visibility)
+   - Dynamic dot opacity: light=0.85, dark=0.7
+   - Dynamic wireframe color: light=#e8e8e8, dark=#1a1a1a
+   - Loading fallback wireframe: #333333 (neutral for both modes)
+
+2. DotMatrixGlobe dark mode (DotMatrixGlobe.tsx):
+   - Added `wireColor`, `labelColor`, `labelShadow` props
+   - Continent labels use theme-aware color and textShadow
+   - Wireframe sphere uses dynamic wireColor
+
+3. PixelGlobe dark mode passthrough (PixelGlobe.tsx):
+   - Added `isDark` prop to PixelGlobeProps
+   - Passes isDark to GlobeScene
+   - Loading spinner now uses `bg-white dark:bg-neutral-950` and dark border colors
+
+4. FlatMap dark mode (FlatMap.tsx):
+   - Added `isDark` prop to FlatMapProps
+   - SVG background: light=#fafafa, dark=#0a0a0a
+   - Ocean dot pattern: light=#e8e8e8, dark=#1a1a1a
+   - Grid lines: light=#e5e5e5, dark=#1f1f1f; equator: light=#d4d4d4, dark=#333333
+   - Continent fills: light=#d4d4d4, dark=#262626; strokes: light=#bbb, dark=#404040
+   - PixelLandDots: light=#a3a3a3, dark=#525252
+   - Location dot strokes: light=white, dark=#0a0a0a
+   - Map title color: light=#a0a0a0, dark=#555555
+   - Attribution text: added dark:text-neutral-600
+
+5. TrajectoryFormDialog dark mode (TrajectoryFormDialog.tsx):
+   - DialogContent: added bg-white dark:bg-neutral-900, border dark variants
+   - Search dropdown: bg-white dark:bg-neutral-800, border dark variants
+   - Search result buttons: hover:bg-neutral-50 dark:hover:bg-neutral-700
+   - Search result text: dark:text-neutral-200, dark:text-neutral-500
+
+6. Page.tsx dark mode prop passing:
+   - Passes `isDark={theme === 'dark'}` to both PixelGlobe and FlatMap
+
+7. Store code quality fix (store.ts):
+   - Fixed redundant ternary: `editingTrajectory: open ? null : null` → `editingTrajectory: null`
+
+**Suggestions for Next Iteration:**
+1. Mobile responsiveness (PRD Phase 3) — sidebar and detail panel need mobile-optimized layouts
+2. Performance: Consider lazy-unmounting the hidden map mode after 30s idle to save GPU resources
+3. TrajectoryLayer: Add location name tooltip on hover (currently only click shows detail panel)
+4. FlatMap: Add pan/zoom controls (currently only viewBox zoom on focus, no manual navigation)
+5. Add trajectory export (GPX/GeoJSON) and import functionality
+6. Add photo attachment support for trajectory locations
+7. Improve FlatMap water exclusion accuracy with more zones (Great Lakes, Sea of Okhotsk, etc.)
+8. Consider using real GeoJSON data for more accurate coastlines instead of hand-crafted polygons
+
+Stage Summary:
+- 6 files modified: GlobeScene.tsx, DotMatrixGlobe.tsx, PixelGlobe.tsx, FlatMap.tsx, TrajectoryFormDialog.tsx, store.ts
+- Dark mode now fully visual across all views (3D globe, 2D map, dialogs, forms)
+- All hardcoded colors replaced with theme-aware dynamic values
+- Zero new lint errors introduced
+- 8 actionable suggestions documented for next iteration

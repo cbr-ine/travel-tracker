@@ -25,6 +25,7 @@ interface FlatMapProps {
   onTrajectoryClick?: (trajectory: FlatMapTrajectory) => void;
   focusTrajectoryId?: string | null;
   className?: string;
+  isDark?: boolean;
 }
 
 // ─── Enhanced continent polygon data ───
@@ -569,7 +570,9 @@ const CONTINENT_PATHS = LAND_POLYGONS.map((poly) => ({
 
 // ─── Grid lines for the flat map ───
 
-function MapGrid() {
+function MapGrid({ isDark = false }: { isDark?: boolean }) {
+  const gridColor = isDark ? '#1f1f1f' : '#e5e5e5';
+  const equatorColor = isDark ? '#333333' : '#d4d4d4';
   const lines: JSX.Element[] = [];
 
   // Latitude lines every 30°
@@ -579,7 +582,7 @@ function MapGrid() {
       <line
         key={`lat-${lat}`}
         x1="0%" y1={`${y}%`} x2="100%" y2={`${y}%`}
-        stroke="#e5e5e5" strokeWidth="0.3" strokeDasharray="2,2"
+        stroke={gridColor} strokeWidth="0.3" strokeDasharray="2,2"
       />
     );
   }
@@ -591,7 +594,7 @@ function MapGrid() {
       <line
         key={`lng-${lng}`}
         x1={`${x}%`} y1="5%" x2={`${x}%`} y2="95%"
-        stroke="#e5e5e5" strokeWidth="0.3" strokeDasharray="2,2"
+        stroke={gridColor} strokeWidth="0.3" strokeDasharray="2,2"
       />
     );
   }
@@ -601,7 +604,7 @@ function MapGrid() {
     <line
       key="equator"
       x1="0%" y1="50%" x2="100%" y2="50%"
-      stroke="#d4d4d4" strokeWidth="0.5"
+      stroke={equatorColor} strokeWidth="0.5"
     />
   );
 
@@ -624,6 +627,7 @@ export default function FlatMap({
   onTrajectoryClick,
   focusTrajectoryId,
   className = '',
+  isDark = false,
 }: FlatMapProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
@@ -656,13 +660,13 @@ export default function FlatMap({
       <svg
         viewBox={viewBox}
         className="w-full h-full"
-        style={{ background: '#fafafa' }}
+        style={{ background: isDark ? '#0a0a0a' : '#fafafa' }}
         preserveAspectRatio="xMidYMid meet"
       >
         {/* Ocean background dots (pixel grid) */}
         <defs>
           <pattern id="ocean-dots" width="3" height="3" patternUnits="userSpaceOnUse">
-            <circle cx="1.5" cy="1.5" r="0.3" fill="#e8e8e8" />
+            <circle cx="1.5" cy="1.5" r="0.3" fill={isDark ? '#1a1a1a' : '#e8e8e8'} />
           </pattern>
           <filter id="glow">
             <feGaussianBlur stdDeviation="1.5" result="blur" />
@@ -675,17 +679,17 @@ export default function FlatMap({
         <rect width="100%" height="100%" fill="url(#ocean-dots)" />
 
         {/* Grid */}
-        <MapGrid />
+        <MapGrid isDark={isDark} />
 
         {/* Landmass shapes (from polygon data) */}
-        <g fill="#d4d4d4" stroke="#bbb" strokeWidth="0.3">
+        <g fill={isDark ? '#262626' : '#d4d4d4'} stroke={isDark ? '#404040' : '#bbb'} strokeWidth="0.3">
           {CONTINENT_PATHS.map((path, i) => (
             <path key={i} d={path.d} />
           ))}
         </g>
 
         {/* Pixel landmass overlay using consistent land detection */}
-        <PixelLandDots />
+        <PixelLandDots isDark={isDark} />
 
         {/* Trajectories */}
         {trajectories.map((traj) => {
@@ -747,7 +751,7 @@ export default function FlatMap({
                     <circle
                       cx={x} cy={y} r={r}
                       fill={traj.color}
-                      stroke="white"
+                      stroke={isDark ? '#0a0a0a' : 'white'}
                       strokeWidth="0.5"
                       filter={isFocused || isHovered ? 'url(#glow)' : undefined}
                     />
@@ -768,7 +772,7 @@ export default function FlatMap({
           fontWeight: 700,
           letterSpacing: '0.15em',
           textTransform: 'uppercase',
-          color: '#a0a0a0',
+          color: isDark ? '#555555' : '#a0a0a0',
           opacity: 0.7,
         }}
       >
@@ -776,7 +780,7 @@ export default function FlatMap({
       </div>
 
       {/* Map attribution */}
-      <div className="absolute bottom-2 left-2 text-[9px] text-neutral-300 pointer-events-none font-mono">
+      <div className="absolute bottom-2 left-2 text-[9px] text-neutral-300 dark:text-neutral-600 pointer-events-none font-mono">
         Equirectangular Projection
       </div>
     </div>
@@ -785,7 +789,7 @@ export default function FlatMap({
 
 // ─── Pixel-style land dots using consistent land detection (same as DotMatrixGlobe + water exclusions) ───
 
-function PixelLandDots() {
+function PixelLandDots({ isDark = false }: { isDark?: boolean }) {
   const dots = useMemo(() => {
     const result: { cx: number; cy: number }[] = [];
     const step = 3.6; // Every ~3.6 degrees
@@ -810,7 +814,7 @@ function PixelLandDots() {
           y={dot.cy - 0.6}
           width={1.2}
           height={1.2}
-          fill="#a3a3a3"
+          fill={isDark ? '#525252' : '#a3a3a3'}
           opacity={0.5}
           rx={0.2}
         />

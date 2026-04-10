@@ -415,6 +415,7 @@ export default function Home() {
             onTrajectoryClick={handleMapTrajectoryClick}
             focusTrajectoryId={focusTrajectoryId}
             className="w-full h-full"
+            isDark={theme === 'dark'}
           />
         </div>
         <div
@@ -426,6 +427,7 @@ export default function Home() {
             onTrajectoryClick={handleMapTrajectoryClick}
             focusTrajectoryId={focusTrajectoryId}
             className="w-full h-full"
+            isDark={theme === 'dark'}
           />
         </div>
 

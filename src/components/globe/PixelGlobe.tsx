@@ -8,9 +8,9 @@ import { Trajectory } from './TrajectoryLayer';
 const GlobeScene = dynamic(() => import('./GlobeScene'), {
   ssr: false,
   loading: () => (
-    <div className="flex items-center justify-center w-full h-full bg-white">
+    <div className="flex items-center justify-center w-full h-full bg-white dark:bg-neutral-950">
       <div className="flex flex-col items-center gap-3">
-        <div className="w-10 h-10 border-2 border-neutral-200 border-t-neutral-500 rounded-full animate-spin" />
+        <div className="w-10 h-10 border-2 border-neutral-200 dark:border-neutral-700 border-t-neutral-500 dark:border-t-neutral-300 rounded-full animate-spin" />
         <span className="text-xs text-neutral-400 font-medium tracking-wide">
           Loading Globe...
         </span>
@@ -43,6 +43,7 @@ export interface PixelGlobeProps {
   radius?: number;
   autoRotate?: boolean;
   focusTrajectoryId?: string | null;
+  isDark?: boolean;
 }
 
 // ─── Main Component ───
@@ -54,6 +55,7 @@ export default function PixelGlobe({
   radius = 2,
   autoRotate = true,
   focusTrajectoryId,
+  isDark = false,
 }: PixelGlobeProps) {
   return (
     <div
@@ -66,6 +68,7 @@ export default function PixelGlobe({
         radius={radius}
         autoRotate={autoRotate}
         focusTrajectoryId={focusTrajectoryId}
+        isDark={isDark}
       />
     </div>
   );

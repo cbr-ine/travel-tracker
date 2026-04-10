@@ -90,7 +90,7 @@ export const useTrajectoryStore = create<TrajectoryStoreState>((set) => ({
   setSelectedTrajectoryId: (id) => set({ selectedTrajectoryId: id }),
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   setFormDialogOpen: (open) =>
-    set({ formDialogOpen: open, editingTrajectory: open ? null : null }),
+    set({ formDialogOpen: open, editingTrajectory: null }),
   setEditingTrajectory: (trajectory) =>
     set({ editingTrajectory: trajectory, formDialogOpen: true }),
   setDetailPanelOpen: (open) => set({ detailPanelOpen: open }),
