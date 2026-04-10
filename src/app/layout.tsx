@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Love Tracks - 恋爱轨迹记录器",
-  description: "用像素点阵风格记录你和爱人的旅行轨迹",
+  title: "轨迹记录",
+  description: "用像素点阵风格记录旅行轨迹",
   icons: {
     icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌍</text></svg>",
   },

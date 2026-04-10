@@ -42,6 +42,7 @@ export interface PixelGlobeProps {
   className?: string;
   radius?: number;
   autoRotate?: boolean;
+  focusTrajectoryId?: string | null;
 }
 
 // ─── Main Component ───
@@ -52,6 +53,7 @@ export default function PixelGlobe({
   className = '',
   radius = 2,
   autoRotate = true,
+  focusTrajectoryId,
 }: PixelGlobeProps) {
   return (
     <div
@@ -63,6 +65,7 @@ export default function PixelGlobe({
         onTrajectoryClick={onTrajectoryClick}
         radius={radius}
         autoRotate={autoRotate}
+        focusTrajectoryId={focusTrajectoryId}
       />
     </div>
   );

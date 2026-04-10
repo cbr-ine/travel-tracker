@@ -2,6 +2,7 @@
 
 import { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
+import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 
 interface DotMatrixGlobeProps {
@@ -12,9 +13,20 @@ interface DotMatrixGlobeProps {
   autoRotateSpeed?: number;
 }
 
+// ─── Continent label data: center coordinates ───
+const CONTINENT_LABELS: { name: string; lat: number; lng: number }[] = [
+  { name: 'North America', lat: 48, lng: -100 },
+  { name: 'South America', lat: -15, lng: -55 },
+  { name: 'Europe', lat: 52, lng: 15 },
+  { name: 'Africa', lat: 5, lng: 22 },
+  { name: 'Asia', lat: 45, lng: 85 },
+  { name: 'Australia', lat: -25, lng: 135 },
+  { name: 'Antarctica', lat: -75, lng: 0 },
+];
+
 export default function DotMatrixGlobe({
   radius = 2,
-  dotSize = 0.025,
+  dotSize = 0.012,
   dotColor = '#1a1a1a',
   dotOpacity = 0.85,
   autoRotateSpeed = 0.15,
@@ -22,9 +34,9 @@ export default function DotMatrixGlobe({
   const groupRef = useRef<THREE.Group>(null);
 
   // Generate dot positions using grid-based approach for pixel effect
+  // step=1.8 for denser dots
   const dotPositions = useMemo(() => {
-    // We'll compute dots inline to avoid import issues
-    return computeGridDots(radius, 3.2);
+    return computeGridDots(radius, 1.8);
   }, [radius]);
 
   // Auto rotation
@@ -47,12 +59,44 @@ export default function DotMatrixGlobe({
       <mesh>
         <sphereGeometry args={[radius * 0.998, 36, 36]} />
         <meshBasicMaterial
-          color="#f0f0f0"
+          color="#e8e8e8"
           transparent
-          opacity={0.03}
+          opacity={0.025}
           wireframe
         />
       </mesh>
+      {/* Continent labels */}
+      {CONTINENT_LABELS.map((c) => {
+        const pos = latLngToVec3(c.lat, c.lng, radius * 1.01);
+        return (
+          <Html
+            key={c.name}
+            position={pos}
+            center
+            distanceFactor={6}
+            style={{
+              pointerEvents: 'none',
+              userSelect: 'none',
+            }}
+          >
+            <div
+              style={{
+                color: '#a0a0a0',
+                fontSize: '8px',
+                fontWeight: 600,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                fontFamily: 'var(--font-geist-mono), monospace',
+                whiteSpace: 'nowrap',
+                opacity: 0.7,
+                textShadow: '0 0 4px rgba(255,255,255,0.8)',
+              }}
+            >
+              {c.name}
+            </div>
+          </Html>
+        );
+      })}
     </group>
   );
 }
@@ -72,12 +116,13 @@ function InstancedDots({
 }) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
 
-  const count = positions.length;
+  // Ensure at least 1 instance to avoid NaN bounding sphere
+  const count = Math.max(positions.length, 1);
 
   // Update instance matrices when mesh is available or positions change
   useEffect(() => {
     const mesh = meshRef.current;
-    if (!mesh) return;
+    if (!mesh || positions.length === 0) return;
 
     const dummy = new THREE.Object3D();
     const up = new THREE.Vector3(0, 1, 0);
@@ -94,6 +139,9 @@ function InstancedDots({
       mesh.setMatrixAt(i, dummy.matrix);
     });
     mesh.instanceMatrix.needsUpdate = true;
+
+    // Explicitly compute bounding sphere to avoid NaN
+    mesh.computeBoundingSphere();
   }, [positions, size]);
 
   return (
@@ -108,6 +156,7 @@ function InstancedDots({
         transparent
         opacity={opacity}
         depthWrite={false}
+        side={THREE.DoubleSide}
       />
     </instancedMesh>
   );

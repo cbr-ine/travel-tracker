@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const NOMINATIM_BASE = "https://nominatim.openstreetmap.org";
-const USER_AGENT = "LoveTracksApp/1.0 (romantic-travel-tracker)";
+const USER_AGENT = "TravelTrackerApp/1.0 (travel-trajectory-tracker)";
 
 interface NominatimSearchResult {
   display_name: string;

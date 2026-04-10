@@ -1,19 +1,34 @@
 'use client';
 
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, Plus, Menu, Heart, X, Trash2, Edit2, Calendar, Map } from 'lucide-react';
+import {
+  MapPin, Plus, Menu, X, Trash2, Edit2, Calendar, Map,
+  Search, BarChart3, Globe2, LayoutGrid, Route, Clock,
+  Navigation, ChevronRight,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Trajectory, useLoveTracksStore } from '@/lib/store';
+import {
+  totalRouteDistance, formatDistance, tripDurationDays, formatDuration,
+} from '@/lib/geo';
 
 // ─── Lazy load globe (Three.js SSR incompatible) ───
 const PixelGlobe = dynamic(() => import('@/components/globe/PixelGlobe'), { ssr: false });
+
+// ─── Lazy load flat map ───
+const FlatMap = dynamic(() => import('@/components/map/FlatMap'), { ssr: false });
+
+// ─── Statistics Panel ───
+import StatisticsPanel from '@/components/StatisticsPanel';
 
 // ─── Trajectory Form Dialog ───
 import TrajectoryFormDialog from '@/components/trajectory/TrajectoryFormDialog';
@@ -42,6 +57,14 @@ export default function Home() {
     detailTrajectory,
     detailPanelOpen,
     setDetailPanelOpen,
+    searchQuery,
+    setSearchQuery,
+    mapMode,
+    setMapMode,
+    focusTrajectoryId,
+    setFocusTrajectoryId,
+    statsPanelOpen,
+    setStatsPanelOpen,
   } = useLoveTracksStore();
 
   // Fetch trajectories on mount
@@ -78,8 +101,20 @@ export default function Home() {
     }
   };
 
-  // Globe trajectories (transformed)
-  const globeTrajectories = useMemo(
+  // Filtered trajectories based on search
+  const filteredTrajectories = useMemo(() => {
+    if (!searchQuery.trim()) return trajectories;
+    const q = searchQuery.toLowerCase().trim();
+    return trajectories.filter(
+      (t) =>
+        t.name.toLowerCase().includes(q) ||
+        t.note?.toLowerCase().includes(q) ||
+        t.locations.some((l) => l.name.toLowerCase().includes(q))
+    );
+  }, [trajectories, searchQuery]);
+
+  // Globe/FlatMap trajectories (transformed)
+  const mapTrajectories = useMemo(
     () =>
       trajectories.map((t) => ({
         id: t.id,
@@ -101,12 +136,60 @@ export default function Home() {
     () => trajectories.reduce((sum, t) => sum + t.locations.length, 0),
     [trajectories]
   );
+  const globalDistance = useMemo(
+    () =>
+      trajectories.reduce((sum, t) => {
+        const sorted = [...t.locations].sort((a, b) => a.order - b.order);
+        return sum + totalRouteDistance(sorted);
+      }, 0),
+    [trajectories]
+  );
+
+  // Handle trajectory click from sidebar → zoom to it
+  const handleSidebarTrajectoryClick = useCallback(
+    (t: Trajectory) => {
+      setDetailTrajectory(t);
+      setSidebarOpen(false);
+      // Focus globe on this trajectory
+      setFocusTrajectoryId(t.id);
+      // Clear focus after a few seconds so globe returns to normal
+      setTimeout(() => {
+        setFocusTrajectoryId(null);
+      }, 6000);
+    },
+    [setDetailTrajectory, setSidebarOpen, setFocusTrajectoryId]
+  );
+
+  // Handle trajectory click from globe/flatmap
+  const handleMapTrajectoryClick = useCallback(
+    (t: { id: string; name: string; color: string; locations: { id: string; name: string; lat: number; lng: number; order: number }[] }) => {
+      const full = trajectories.find((tr) => tr.id === t.id);
+      if (full) {
+        setDetailTrajectory(full);
+        setFocusTrajectoryId(t.id);
+        setTimeout(() => {
+          setFocusTrajectoryId(null);
+        }, 6000);
+      }
+    },
+    [trajectories, setDetailTrajectory, setFocusTrajectoryId]
+  );
+
+  // Compute detail trajectory stats
+  const detailStats = useMemo(() => {
+    if (!detailTrajectory) return null;
+    const sorted = [...detailTrajectory.locations].sort((a, b) => a.order - b.order);
+    const distance = totalRouteDistance(sorted);
+    const days = tripDurationDays(detailTrajectory.startDate, detailTrajectory.endDate);
+    const avgPerDay = days > 0 ? distance / days : 0;
+    return { distance, days, avgPerDay, sorted };
+  }, [detailTrajectory]);
 
   return (
     <div className="h-screen w-screen flex flex-col bg-white overflow-hidden relative">
       {/* ─── Header ─── */}
       <header className="absolute top-0 left-0 right-0 z-30 px-4 sm:px-6 pt-4 sm:pt-5 flex items-start justify-between pointer-events-none">
-        <div className="pointer-events-auto">
+        <div className="pointer-events-auto flex items-center gap-2">
           <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
             <SheetTrigger asChild>
               <Button
@@ -120,14 +203,39 @@ export default function Home() {
             <SheetContent side="left" className="w-80 sm:w-96 p-0">
               <SheetHeader className="p-5 pb-3">
                 <SheetTitle className="flex items-center gap-2 text-lg">
-                  <Heart className="h-4 w-4 text-red-400" />
-                  Love Tracks
+                  <MapPin className="h-4 w-4 text-neutral-500" />
+                  轨迹记录
                 </SheetTitle>
-                <p className="text-sm text-neutral-500 -mt-1">我们的旅行轨迹</p>
+                <p className="text-sm text-neutral-500 -mt-1">旅行轨迹记录</p>
               </SheetHeader>
               <Separator />
+              {/* Search */}
+              <div className="px-4 py-3">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-400" />
+                  <Input
+                    placeholder="搜索轨迹、地点..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="h-9 pl-8 text-sm bg-neutral-50 border-neutral-200 focus:bg-white"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+                {searchQuery && (
+                  <p className="text-[10px] text-neutral-400 mt-1.5 px-1">
+                    找到 {filteredTrajectories.length} 个轨迹
+                  </p>
+                )}
+              </div>
               {/* Stats */}
-              <div className="px-5 py-3 flex gap-3">
+              <div className="px-5 pb-3 flex gap-2.5">
                 <div className="flex-1 bg-neutral-50 rounded-lg p-2.5 text-center">
                   <div className="text-lg font-bold text-neutral-800">{trajectories.length}</div>
                   <div className="text-[10px] text-neutral-400 uppercase tracking-wider">轨迹</div>
@@ -136,72 +244,97 @@ export default function Home() {
                   <div className="text-lg font-bold text-neutral-800">{totalLocations}</div>
                   <div className="text-[10px] text-neutral-400 uppercase tracking-wider">地点</div>
                 </div>
+                <div className="flex-1 bg-neutral-50 rounded-lg p-2.5 text-center">
+                  <div className="text-lg font-bold text-neutral-800 text-xs">
+                    {globalDistance > 0 ? `${(globalDistance / 1000).toFixed(1)}k` : '0'}
+                  </div>
+                  <div className="text-[10px] text-neutral-400 uppercase tracking-wider">km</div>
+                </div>
               </div>
               <Separator />
               {/* Trajectory List */}
-              <ScrollArea className="flex-1 h-[calc(100vh-220px)]">
+              <ScrollArea className="flex-1 h-[calc(100vh-260px)]">
                 <div className="p-3 space-y-1.5">
-                  {trajectories.length === 0 && (
+                  {filteredTrajectories.length === 0 && (
                     <div className="text-center py-12 text-neutral-400 text-sm">
-                      还没有轨迹，点击右下角按钮开始记录
+                      {searchQuery ? '没有匹配的轨迹' : '还没有轨迹，点击右下角按钮开始记录'}
                     </div>
                   )}
-                  {trajectories.map((t) => (
-                    <motion.button
-                      key={t.id}
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => {
-                        setDetailTrajectory(t);
-                        setSidebarOpen(false);
-                      }}
-                      className="w-full text-left px-3 py-3 rounded-xl hover:bg-neutral-50 transition-colors group"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div
-                          className="w-3 h-3 rounded-full mt-1 shrink-0 ring-2 ring-offset-1"
-                          style={{ backgroundColor: t.color, ringColor: t.color + '30' }}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm text-neutral-800 truncate">{t.name}</div>
-                          <div className="flex items-center gap-1.5 mt-1 text-xs text-neutral-400">
-                            <Calendar className="h-3 w-3" />
-                            {formatDate(t.startDate)}
-                            {t.endDate && ` — ${formatDate(t.endDate)}`}
+                  {filteredTrajectories.map((t) => {
+                    const sorted = [...t.locations].sort((a, b) => a.order - b.order);
+                    const dist = totalRouteDistance(sorted);
+                    const days = tripDurationDays(t.startDate, t.endDate);
+                    return (
+                      <motion.button
+                        key={t.id}
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => handleSidebarTrajectoryClick(t)}
+                        className={`w-full text-left px-3 py-3 rounded-xl transition-colors group ${
+                          focusTrajectoryId === t.id
+                            ? 'bg-neutral-100'
+                            : 'hover:bg-neutral-50'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div
+                            className="w-3 h-3 rounded-full mt-1 shrink-0 ring-2 ring-offset-1"
+                            style={{ backgroundColor: t.color, ringColor: t.color + '30' }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm text-neutral-800 truncate">
+                              {t.name}
+                            </div>
+                            <div className="flex items-center gap-3 mt-1">
+                              <span className="flex items-center gap-1 text-xs text-neutral-400">
+                                <Calendar className="h-3 w-3" />
+                                {formatDate(t.startDate)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3 mt-0.5">
+                              <span className="flex items-center gap-1 text-xs text-neutral-400">
+                                <MapPin className="h-3 w-3" />
+                                {t.locations.length} 地点
+                              </span>
+                              <span className="flex items-center gap-1 text-xs text-neutral-400">
+                                <Route className="h-3 w-3" />
+                                {formatDistance(dist)}
+                              </span>
+                              <span className="flex items-center gap-1 text-xs text-neutral-400">
+                                <Clock className="h-3 w-3" />
+                                {formatDuration(days)}
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1.5 mt-0.5 text-xs text-neutral-400">
-                            <MapPin className="h-3 w-3" />
-                            {t.locations.length} 个地点
+                          <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingTrajectory(t);
+                                setSidebarOpen(false);
+                              }}
+                            >
+                              <Edit2 className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-red-400 hover:text-red-500 hover:bg-red-50"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(t.id);
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
                           </div>
                         </div>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingTrajectory(t);
-                              setSidebarOpen(false);
-                            }}
-                          >
-                            <Edit2 className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-red-400 hover:text-red-500 hover:bg-red-50"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(t.id);
-                            }}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </motion.button>
-                  ))}
+                      </motion.button>
+                    );
+                  })}
                 </div>
               </ScrollArea>
             </SheetContent>
@@ -210,24 +343,90 @@ export default function Home() {
 
         {/* Center title */}
         <div className="pointer-events-none hidden sm:block">
-          <h1 className="text-xl font-bold text-neutral-900 tracking-tight">Love Tracks</h1>
-          <p className="text-xs text-neutral-400 text-center mt-0.5">恋爱轨迹记录器</p>
+          <h1 className="text-xl font-bold text-neutral-900 tracking-tight">轨迹记录</h1>
+          <p className="text-xs text-neutral-400 text-center mt-0.5">Travel Tracker</p>
         </div>
 
-        {/* Right side empty for balance */}
-        <div className="w-10" />
+        {/* Right side controls */}
+        <div className="pointer-events-auto flex items-center gap-2">
+          {/* Map mode toggle */}
+          <div className="flex items-center gap-1 px-1 py-1 rounded-xl bg-white/80 backdrop-blur-sm shadow-sm border border-neutral-200">
+            <ToggleGroup
+              type="single"
+              value={mapMode}
+              onValueChange={(val) => {
+                if (val) setMapMode(val as 'globe' | 'flat');
+              }}
+              className="bg-transparent gap-0"
+            >
+              <ToggleGroupItem
+                value="globe"
+                size="sm"
+                className="h-8 w-8 rounded-lg data-[state=on]:bg-neutral-900 data-[state=on]:text-white p-0"
+                aria-label="3D Globe"
+              >
+                <Globe2 className="h-4 w-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="flat"
+                size="sm"
+                className="h-8 w-8 rounded-lg data-[state=on]:bg-neutral-900 data-[state=on]:text-white p-0"
+                aria-label="2D Map"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+
+          {/* Stats button */}
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-10 w-10 rounded-xl border-neutral-200 bg-white/80 backdrop-blur-sm shadow-sm hover:bg-neutral-50"
+            onClick={() => setStatsPanelOpen(true)}
+          >
+            <BarChart3 className="h-4 w-4 text-neutral-700" />
+          </Button>
+        </div>
       </header>
 
-      {/* ─── Globe ─── */}
+      {/* ─── Globe / Flat Map ─── */}
       <div className="flex-1 relative">
-        <PixelGlobe
-          trajectories={globeTrajectories}
-          onTrajectoryClick={(t) => {
-            const full = trajectories.find((tr) => tr.id === t.id);
-            if (full) setDetailTrajectory(full);
-          }}
-          className="w-full h-full"
-        />
+        <AnimatePresence mode="wait">
+          {mapMode === 'globe' ? (
+            <motion.div
+              key="globe"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="absolute inset-0"
+            >
+              <PixelGlobe
+                trajectories={mapTrajectories}
+                onTrajectoryClick={handleMapTrajectoryClick}
+                focusTrajectoryId={focusTrajectoryId}
+                className="w-full h-full"
+              />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="flat"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="absolute inset-0"
+            >
+              <FlatMap
+                trajectories={mapTrajectories}
+                onTrajectoryClick={handleMapTrajectoryClick}
+                focusTrajectoryId={focusTrajectoryId}
+                className="w-full h-full"
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Loading overlay */}
         <AnimatePresence>
@@ -258,6 +457,10 @@ export default function Home() {
             <Badge variant="secondary" className="font-mono text-xs px-2.5">
               {totalLocations} 地点
             </Badge>
+            <div className="w-px h-3 bg-neutral-200" />
+            <Badge variant="secondary" className="font-mono text-xs px-2.5">
+              {formatDistance(globalDistance)}
+            </Badge>
           </div>
         </div>
       </div>
@@ -277,15 +480,15 @@ export default function Home() {
         </Button>
       </motion.div>
 
-      {/* ─── Trajectory Detail Panel ─── */}
+      {/* ─── Trajectory Detail Panel (Improved) ─── */}
       <AnimatePresence>
-        {detailPanelOpen && detailTrajectory && (
+        {detailPanelOpen && detailTrajectory && detailStats && (
           <motion.div
             initial={{ opacity: 0, y: 40, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="absolute inset-x-4 bottom-20 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[440px] z-40"
+            className="absolute inset-x-4 bottom-20 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[480px] z-40"
           >
             <div className="bg-white rounded-2xl shadow-2xl border border-neutral-100 overflow-hidden">
               {/* Header */}
@@ -338,15 +541,50 @@ export default function Home() {
                 {detailTrajectory.note && (
                   <p className="text-sm text-neutral-500 mt-2 leading-relaxed">{detailTrajectory.note}</p>
                 )}
+
+                {/* Stats row */}
+                <div className="flex items-center gap-3 mt-3">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-neutral-50 rounded-lg">
+                    <Route className="h-3.5 w-3.5 text-emerald-600" />
+                    <span className="text-xs font-medium text-neutral-700">
+                      {formatDistance(detailStats.distance)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-neutral-50 rounded-lg">
+                    <Clock className="h-3.5 w-3.5 text-amber-600" />
+                    <span className="text-xs font-medium text-neutral-700">
+                      {formatDuration(detailStats.days)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-neutral-50 rounded-lg">
+                    <Navigation className="h-3.5 w-3.5 text-rose-600" />
+                    <span className="text-xs font-medium text-neutral-700">
+                      {detailStats.avgPerDay > 0 ? formatDistance(detailStats.avgPerDay) + '/天' : '—'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-neutral-50 rounded-lg">
+                    <MapPin className="h-3.5 w-3.5 text-violet-600" />
+                    <span className="text-xs font-medium text-neutral-700">
+                      {detailTrajectory.locations.length} 地点
+                    </span>
+                  </div>
+                </div>
               </div>
               <Separator />
               {/* Locations */}
-              <ScrollArea className="max-h-48">
+              <ScrollArea className="max-h-52">
                 <div className="px-5 py-3">
                   <div className="space-y-2.5">
-                    {detailTrajectory.locations
-                      .sort((a, b) => a.order - b.order)
-                      .map((loc, idx) => (
+                    {detailStats.sorted.map((loc, idx) => {
+                      const prevLoc = idx > 0 ? detailStats.sorted[idx - 1] : null;
+                      const segmentDist = prevLoc
+                        ? totalRouteDistance([
+                            { lat: prevLoc.lat, lng: prevLoc.lng },
+                            { lat: loc.lat, lng: loc.lng },
+                          ])
+                        : null;
+
+                      return (
                         <div key={loc.id || idx} className="flex items-start gap-3">
                           <div className="flex flex-col items-center mt-0.5">
                             <div
@@ -362,15 +600,24 @@ export default function Home() {
                           </div>
                           <div className="flex-1 -mt-0.5">
                             <div className="text-sm font-medium text-neutral-800">{loc.name}</div>
-                            <div className="text-[10px] text-neutral-400 font-mono mt-0.5">
-                              {loc.lat.toFixed(4)}, {loc.lng.toFixed(4)}
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[10px] text-neutral-400 font-mono">
+                                {loc.lat.toFixed(4)}, {loc.lng.toFixed(4)}
+                              </span>
+                              {segmentDist !== null && (
+                                <span className="flex items-center gap-0.5 text-[10px] text-neutral-400">
+                                  <ChevronRight className="h-2.5 w-2.5" />
+                                  {formatDistance(segmentDist)}
+                                </span>
+                              )}
                             </div>
                           </div>
                           <Badge variant="outline" className="text-[10px] px-1.5 font-mono text-neutral-400">
                             {idx + 1}
                           </Badge>
                         </div>
-                      ))}
+                      );
+                    })}
                   </div>
                 </div>
               </ScrollArea>
@@ -378,6 +625,13 @@ export default function Home() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ─── Statistics Panel ─── */}
+      <StatisticsPanel
+        trajectories={trajectories}
+        open={statsPanelOpen}
+        onClose={() => setStatsPanelOpen(false)}
+      />
 
       {/* ─── Trajectory Form Dialog ─── */}
       <TrajectoryFormDialog

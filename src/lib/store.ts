@@ -22,6 +22,8 @@ export interface Trajectory {
   locations: TrajectoryPoint[];
 }
 
+export type MapMode = 'globe' | 'flat';
+
 // ─── State ───
 
 interface LoveTracksState {
@@ -33,6 +35,10 @@ interface LoveTracksState {
   detailPanelOpen: boolean;
   detailTrajectory: Trajectory | null;
   isLoading: boolean;
+  searchQuery: string;
+  mapMode: MapMode;
+  focusTrajectoryId: string | null;
+  statsPanelOpen: boolean;
 
   // Actions
   setTrajectories: (trajectories: Trajectory[]) => void;
@@ -46,6 +52,10 @@ interface LoveTracksState {
   setDetailPanelOpen: (open: boolean) => void;
   setDetailTrajectory: (trajectory: Trajectory | null) => void;
   setIsLoading: (loading: boolean) => void;
+  setSearchQuery: (query: string) => void;
+  setMapMode: (mode: MapMode) => void;
+  setFocusTrajectoryId: (id: string | null) => void;
+  setStatsPanelOpen: (open: boolean) => void;
 }
 
 export const useLoveTracksStore = create<LoveTracksState>((set) => ({
@@ -57,6 +67,10 @@ export const useLoveTracksStore = create<LoveTracksState>((set) => ({
   detailPanelOpen: false,
   detailTrajectory: null,
   isLoading: false,
+  searchQuery: '',
+  mapMode: 'globe',
+  focusTrajectoryId: null,
+  statsPanelOpen: false,
 
   setTrajectories: (trajectories) => set({ trajectories }),
   addTrajectory: (trajectory) =>
@@ -83,4 +97,8 @@ export const useLoveTracksStore = create<LoveTracksState>((set) => ({
   setDetailTrajectory: (trajectory) =>
     set({ detailTrajectory: trajectory, detailPanelOpen: true }),
   setIsLoading: (loading) => set({ isLoading: loading }),
+  setSearchQuery: (query) => set({ searchQuery: query }),
+  setMapMode: (mode) => set({ mapMode: mode }),
+  setFocusTrajectoryId: (id) => set({ focusTrajectoryId: id }),
+  setStatsPanelOpen: (open) => set({ statsPanelOpen: open }),
 }));

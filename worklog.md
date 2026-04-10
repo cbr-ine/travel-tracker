@@ -68,3 +68,56 @@ Stage Summary:
 - 4 demo trajectories pre-seeded (Paris honeymoon, US anniversary, Asia adventure, China road trip)
 - Location search powered by Nominatim geocoding proxy
 - Pixel dot matrix visual style applied throughout
+
+---
+Task ID: 4
+Agent: Main Agent
+Task: Add trajectory search/filter, statistics panel, zoom-to-trajectory, improved detail panel, 2D flat map toggle
+
+Work Log:
+- Created src/lib/geo.ts with Haversine distance, totalRouteDistance, formatDistance, tripDurationDays, formatDuration utilities
+- Updated src/lib/store.ts with new state: searchQuery, mapMode (globe|flat), focusTrajectoryId, statsPanelOpen
+- Created src/components/map/FlatMap.tsx - SVG-based 2D equirectangular map with pixel-style land dots, grid lines, trajectory arcs, interactive dots, auto-zoom on focus
+- Created src/components/StatisticsPanel.tsx - slide-in panel with total distance, total days, avg daily distance, distance ranking chart, year distribution, most-locations trajectory
+- Updated src/components/globe/GlobeScene.tsx with CameraController using useFrame for smooth zoom-to-trajectory animation (lerp camera position + quaternion)
+- Updated src/components/globe/TrajectoryLayer.tsx with highlightTrajectoryId prop - enlarged dots, brighter lines, extra glow rings when focused
+- Updated src/components/globe/PixelGlobe.tsx with focusTrajectoryId prop passthrough
+- Updated src/app/page.tsx with all 5 features:
+  1) Search input in sidebar with real-time filtering by trajectory name, note, and location name
+  2) Stats panel button in header, full statistics overlay
+  3) Zoom-to-trajectory on sidebar click and globe click (6s auto-reset)
+  4) Detail panel shows distance, duration, avg per day, segment distances between locations
+  5) Toggle between 3D globe and 2D flat map in header controls
+- All lint checks pass (only pre-existing errors in download/generate-prd.js)
+
+Stage Summary:
+- New files: src/lib/geo.ts, src/components/map/FlatMap.tsx, src/components/StatisticsPanel.tsx
+- Modified files: store.ts, page.tsx, PixelGlobe.tsx, GlobeScene.tsx, TrajectoryLayer.tsx
+- 5 features fully implemented: search, stats, zoom, detail panel, 2D toggle
+
+---
+Task ID: 5
+Agent: Main Agent
+Task: Rename app, fix NaN bug, improve globe, add cron job
+
+Work Log:
+- Renamed "Love Tracks / 恋爱轨迹记录" to "轨迹记录" across layout.tsx, page.tsx, TrajectoryFormDialog.tsx, geocode route
+- Fixed NaN bounding sphere bug in Three.js:
+  - Added Math.max(positions.length, 1) guard in InstancedDots
+  - Added explicit computeBoundingSphere() after setting instance matrices
+  - Added isFinite() validation in TrajectoryLayer for all point positions
+  - Added null geometry guard in TrajectoryLine
+  - Added edge case handling in outwardRotation for parallel vectors
+- Improved globe:
+  - Reduced dot size from 0.025 to 0.012 for finer pixel aesthetic
+  - Reduced grid step from 3.2 to 1.8 for denser dot coverage
+  - Added side: THREE.DoubleSide to all circle/ring materials to fix transparency at angles
+  - Added English continent labels using Html from @react-three/drei (7 labels: N/S America, Europe, Africa, Asia, Australia, Antarctica)
+- Fixed missing useThree import in GlobeScene.tsx
+- Created cron job (ID: 77212) running every 30 minutes for iterative review
+
+Stage Summary:
+- App fully rebranded to "轨迹记录" (no more love theme references)
+- Three.js NaN error resolved with comprehensive guards
+- Globe now has denser, smaller dots, no transparency issues, and English continent names
+- Cron job configured for continuous improvement
