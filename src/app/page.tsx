@@ -44,7 +44,7 @@ function formatDate(dateStr: string): string {
 // ─── Main Page ───
 
 export default function Home() {
-  const { theme, resolvedTheme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   // Use resolvedTheme for isDark to handle hydration mismatch (theme can be undefined initially)
   const isDark = resolvedTheme === 'dark';
   const {
@@ -249,7 +249,7 @@ export default function Home() {
                   <div className="text-[10px] text-neutral-400 uppercase tracking-wider">地点</div>
                 </div>
                 <div className="flex-1 bg-neutral-50 dark:bg-neutral-800 rounded-lg p-2.5 text-center">
-                  <div className="text-lg font-bold text-neutral-800 dark:text-neutral-200 text-xs">
+                  <div className="text-lg font-bold text-neutral-800 dark:text-neutral-200">
                     {globalDistance > 0 ? `${(globalDistance / 1000).toFixed(1)}k` : '0'}
                   </div>
                   <div className="text-[10px] text-neutral-400 uppercase tracking-wider">km</div>

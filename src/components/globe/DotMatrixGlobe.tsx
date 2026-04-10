@@ -4,7 +4,7 @@ import { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
-import { isLand } from '@/lib/world-data';
+import { isLand, latLngToVector3 } from '@/lib/world-data';
 
 interface DotMatrixGlobeProps {
   radius?: number;
@@ -74,7 +74,7 @@ export default function DotMatrixGlobe({
       </mesh>
       {/* Continent labels */}
       {CONTINENT_LABELS.map((c) => {
-        const pos = latLngToVec3(c.lat, c.lng, radius * 1.01);
+        const pos = latLngToVector3(c.lat, c.lng, radius * 1.01);
         return (
           <Html
             key={c.name}
@@ -180,16 +180,7 @@ function InstancedDots({
 }
 
 // ─── Land detection uses shared isLand from world-data.ts ───
-
-function latLngToVec3(lat: number, lng: number, r: number): [number, number, number] {
-  const phi = (90 - lat) * (Math.PI / 180);
-  const theta = (lng + 180) * (Math.PI / 180);
-  return [
-    -(r * Math.sin(phi) * Math.cos(theta)),
-    r * Math.cos(phi),
-    r * Math.sin(phi) * Math.sin(theta),
-  ];
-}
+// ─── latLngToVector3 also from world-data.ts ───
 
 function computeGridDots(radius: number, step: number): [number, number, number][] {
   const dots: [number, number, number][] = [];
@@ -198,7 +189,7 @@ function computeGridDots(radius: number, step: number): [number, number, number]
     const clamped = Math.min(Math.max(lngStep, step), step * 3);
     for (let lng = -180; lng < 180; lng += clamped) {
       if (isLand(lat, lng)) {
-        dots.push(latLngToVec3(lat, lng, radius));
+        dots.push(latLngToVector3(lat, lng, radius));
       }
     }
   }

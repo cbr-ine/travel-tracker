@@ -420,3 +420,45 @@ Stage Summary:
 - Dark mode now truly complete — all interactive elements have proper dark variants
 - Application in mature, production-ready state
 - All 11 prior task fixes confirmed intact
+
+---
+Task ID: 12
+Agent: Main Agent (Cron Review #6)
+Task: Sixth comprehensive review — UI bug fix, code deduplication, performance audit
+
+Work Log:
+**Review Findings:**
+1. Three.js NaN guards: All still comprehensive and correct. No new NaN risks.
+2. Dev Log: App compiling cleanly. GET / and /api/trajectories returning 200 consistently. No runtime errors.
+3. Lint: Clean — only pre-existing errors in download/generate-prd.js (not app code).
+4. UI Bug — CRITICAL: Sidebar km stat card (page.tsx line 252) has `text-lg font-bold text-neutral-800 dark:text-neutral-200 text-xs`. In Tailwind CSS, `text-xs` (0.75rem) comes after `text-lg` (1.125rem) and overrides it, making the km value render at tiny 12px instead of matching the 18px of the other two stat cards (轨迹 count and 地点 count).
+5. Code Quality: Unused `theme` variable destructured from `useTheme()` in page.tsx line 47 — only `resolvedTheme` is used.
+6. Code Duplication: `latLngToVec3` function identically defined in both DotMatrixGlobe.tsx (8 lines) and TrajectoryLayer.tsx (8 lines), despite `latLngToVector3` already being exported from world-data.ts with the same logic.
+7. Performance: Dual-mounted PixelGlobe + FlatMap remains acceptable. Globe dot computation (~18k isLand() calls with 16+ polygon ray-casts) runs once on mount via useMemo — acceptable.
+8. Architecture: All imports resolved, all API routes functional, Prisma schema clean.
+
+**Fixes Applied:**
+1. Fixed km stat card font size bug (page.tsx):
+   - Removed conflicting `text-xs` from line 252
+   - The km value now renders at `text-lg` (1.125rem) matching the trajectory and location count cards
+
+2. Removed unused `theme` variable (page.tsx):
+   - `const { theme, resolvedTheme, setTheme }` → `const { resolvedTheme, setTheme }`
+   - `resolvedTheme` already handles SSR hydration correctly
+
+3. Consolidated duplicated `latLngToVec3` (DotMatrixGlobe.tsx + TrajectoryLayer.tsx):
+   - DotMatrixGlobe.tsx: Added `latLngToVector3` to import from `@/lib/world-data`, replaced local `latLngToVec3` calls with `latLngToVector3`, removed 8-line local function
+   - TrajectoryLayer.tsx: Added `latLngToVector3` import from `@/lib/world-data`, replaced 8-line local function with alias `const latLngToVec3 = latLngToVector3`
+   - All coordinate conversion now uses the single shared implementation in world-data.ts
+
+**Performance Notes:**
+- GlobeScene fog uses default THREE.Fog parameters (far=1000) which is too distant to visually affect the globe (radius 2, camera at 5.5). This is acceptable as subtle depth cue.
+- CameraController lerp animation uses `t * 0.12` factor with easeInOutCubic easing — smooth and natural feel.
+- TrajectoryLine uses 32 arc segments per location pair — good visual quality for typical trajectory distances.
+
+Stage Summary:
+- 3 files modified: page.tsx (2 fixes), DotMatrixGlobe.tsx (1 fix), TrajectoryLayer.tsx (1 fix)
+- UI bug fixed: km stat card now matches other stat card sizes
+- Code deduplication: all lat/lng→3D conversion uses single shared function
+- Application remains stable with no new issues introduced
+- All 12 prior task fixes confirmed intact

@@ -3,6 +3,7 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { latLngToVector3 } from '@/lib/world-data';
 
 // ─── Types ───
 
@@ -41,17 +42,8 @@ const DEFAULT_PALETTE = [
   '#00BBF9', // sky blue
 ];
 
-// ─── Helper: lat/lng → sphere XYZ ───
-
-function latLngToVec3(lat: number, lng: number, r: number): [number, number, number] {
-  const phi = (90 - lat) * (Math.PI / 180);
-  const theta = (lng + 180) * (Math.PI / 180);
-  return [
-    -(r * Math.sin(phi) * Math.cos(theta)),
-    r * Math.cos(phi),
-    r * Math.sin(phi) * Math.sin(theta),
-  ];
-}
+// ─── latLngToVec3 uses shared latLngToVector3 from world-data.ts ───
+const latLngToVec3 = latLngToVector3;
 
 // ─── Helper: compute outward-facing euler for a position on a sphere ───
 
