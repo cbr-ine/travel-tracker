@@ -2,87 +2,84 @@ import { create } from 'zustand';
 
 // ─── Types ───
 
-export interface TrajectoryPoint {
-  id?: string;
+export interface VisitedCountry {
+  id: string;
+  code: string;
   name: string;
-  lat: number;
-  lng: number;
-  order: number;
+  nameZh: string;
+  visitedAt: string;
 }
 
-export interface Trajectory {
+export interface VisitedPlace {
   id: string;
   name: string;
-  startDate: string;
-  endDate?: string | null;
-  color: string;
-  note?: string | null;
-  createdAt: string;
-  updatedAt: string;
-  locations: TrajectoryPoint[];
+  province: string;
+  adcode: string;
+  lat: number;
+  lng: number;
+  level: string;
+  visitedAt: string;
 }
 
-export type MapMode = 'globe' | 'flat';
+export type AppView = 'globe' | 'world' | 'china' | 'stats';
 
 // ─── State ───
 
-interface TrajectoryStoreState {
-  trajectories: Trajectory[];
-  sidebarOpen: boolean;
-  formDialogOpen: boolean;
-  editingTrajectory: Trajectory | null;
-  detailPanelOpen: boolean;
-  detailTrajectory: Trajectory | null;
+interface TravelStoreState {
+  // Data
+  countries: VisitedCountry[];
+  places: VisitedPlace[];
   isLoading: boolean;
-  searchQuery: string;
-  mapMode: MapMode;
-  focusTrajectoryId: string | null;
+
+  // UI
+  currentView: AppView;
   statsPanelOpen: boolean;
 
   // Actions
-  setTrajectories: (trajectories: Trajectory[]) => void;
-  removeTrajectory: (id: string) => void;
-  setSidebarOpen: (open: boolean) => void;
-  setFormDialogOpen: (open: boolean) => void;
-  setEditingTrajectory: (trajectory: Trajectory | null) => void;
-  setDetailPanelOpen: (open: boolean) => void;
-  setDetailTrajectory: (trajectory: Trajectory | null) => void;
+  setCountries: (countries: VisitedCountry[]) => void;
+  addCountry: (country: VisitedCountry) => void;
+  removeCountry: (code: string) => void;
+  setPlaces: (places: VisitedPlace[]) => void;
+  addPlace: (place: VisitedPlace) => void;
+  removePlace: (id: string) => void;
+  setCurrentView: (view: AppView) => void;
   setIsLoading: (loading: boolean) => void;
-  setSearchQuery: (query: string) => void;
-  setMapMode: (mode: MapMode) => void;
-  setFocusTrajectoryId: (id: string | null) => void;
   setStatsPanelOpen: (open: boolean) => void;
+
+  // Helpers
+  isCountryVisited: (code: string) => boolean;
+  isPlaceVisited: (name: string, province: string) => boolean;
 }
 
-export const useTrajectoryStore = create<TrajectoryStoreState>((set) => ({
-  trajectories: [],
-  sidebarOpen: false,
-  formDialogOpen: false,
-  editingTrajectory: null,
-  detailPanelOpen: false,
-  detailTrajectory: null,
+export const useTravelStore = create<TravelStoreState>((set, get) => ({
+  countries: [],
+  places: [],
   isLoading: false,
-  searchQuery: '',
-  mapMode: 'globe',
-  focusTrajectoryId: null,
+  currentView: 'globe',
   statsPanelOpen: false,
 
-  setTrajectories: (trajectories) => set({ trajectories }),
-  removeTrajectory: (id) =>
+  setCountries: (countries) => set({ countries }),
+  addCountry: (country) =>
+    set((state) => ({ countries: [...state.countries, country] })),
+  removeCountry: (code) =>
     set((state) => ({
-      trajectories: state.trajectories.filter((t) => t.id !== id),
+      countries: state.countries.filter((c) => c.code !== code),
     })),
-  setSidebarOpen: (open) => set({ sidebarOpen: open }),
-  setFormDialogOpen: (open) =>
-    set({ formDialogOpen: open, editingTrajectory: null }),
-  setEditingTrajectory: (trajectory) =>
-    set({ editingTrajectory: trajectory, formDialogOpen: true }),
-  setDetailPanelOpen: (open) => set({ detailPanelOpen: open }),
-  setDetailTrajectory: (trajectory) =>
-    set({ detailTrajectory: trajectory, detailPanelOpen: true }),
+  setPlaces: (places) => set({ places }),
+  addPlace: (place) =>
+    set((state) => ({ places: [...state.places, place] })),
+  removePlace: (id) =>
+    set((state) => ({
+      places: state.places.filter((p) => p.id !== id),
+    })),
+  setCurrentView: (view) => set({ currentView: view }),
   setIsLoading: (loading) => set({ isLoading: loading }),
-  setSearchQuery: (query) => set({ searchQuery: query }),
-  setMapMode: (mode) => set({ mapMode: mode }),
-  setFocusTrajectoryId: (id) => set({ focusTrajectoryId: id }),
   setStatsPanelOpen: (open) => set({ statsPanelOpen: open }),
+
+  isCountryVisited: (code) =>
+    get().countries.some((c) => c.code === code),
+  isPlaceVisited: (name, province) =>
+    get().places.some(
+      (p) => p.name === name && p.province === (province || '')
+    ),
 }));

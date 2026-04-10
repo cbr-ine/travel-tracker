@@ -1,306 +1,247 @@
 'use client';
 
 import { useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   BarChart3,
-  Route,
+  Globe2,
+  Navigation,
   MapPin,
   Calendar,
   TrendingUp,
-  Globe2,
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trajectory } from '@/lib/store';
-import { totalRouteDistance, formatDistance, tripDurationDays, formatDuration } from '@/lib/geo';
 
 // ─── Types ───
 
+interface VisitedCountry {
+  id: string;
+  code: string;
+  name: string;
+  nameZh: string;
+  visitedAt: string;
+}
+
+interface VisitedPlace {
+  id: string;
+  name: string;
+  province: string;
+  adcode: string;
+  lat: number;
+  lng: number;
+  level: string;
+  visitedAt: string;
+}
+
 interface StatisticsPanelProps {
-  trajectories: Trajectory[];
-  open: boolean;
-  onClose: () => void;
+  countries: VisitedCountry[];
+  places: VisitedPlace[];
+  isDark?: boolean;
+  className?: string;
 }
 
 // ─── Component ───
 
 export default function StatisticsPanel({
-  trajectories,
-  open,
-  onClose,
+  countries,
+  places,
+  isDark = false,
+  className = '',
 }: StatisticsPanelProps) {
-  const stats = useMemo(() => {
-    const totalTrajectories = trajectories.length;
-    const totalLocations = trajectories.reduce(
-      (sum, t) => sum + t.locations.length,
-      0
-    );
+  // Province count
+  const provinceCount = useMemo(
+    () => new Set(places.filter((p) => p.level === 'province').map((p) => p.adcode)).size,
+    [places]
+  );
 
-    // Total distance across all trajectories
-    let globalDistance = 0;
-    const trajectoryDistances: { name: string; color: string; distance: number }[] = [];
+  // City count (non-province)
+  const cityCount = useMemo(
+    () => places.filter((p) => p.level === 'city').length,
+    [places]
+  );
 
-    for (const t of trajectories) {
-      const sorted = [...t.locations].sort((a, b) => a.order - b.order);
-      const dist = totalRouteDistance(sorted);
-      globalDistance += dist;
-      trajectoryDistances.push({ name: t.name, color: t.color, distance: dist });
-    }
+  // Most recent countries
+  const recentCountries = useMemo(
+    () => [...countries].sort((a, b) => new Date(b.visitedAt).getTime() - new Date(a.visitedAt).getTime()).slice(0, 10),
+    [countries]
+  );
 
-    // Total duration
-    let globalDays = 0;
-    for (const t of trajectories) {
-      globalDays += tripDurationDays(t.startDate, t.endDate);
-    }
+  // Most recent places
+  const recentPlaces = useMemo(
+    () => [...places].sort((a, b) => new Date(b.visitedAt).getTime() - new Date(a.visitedAt).getTime()).slice(0, 10),
+    [places]
+  );
 
-    // Longest trajectory
-    const longest = trajectoryDistances.length > 0
-      ? trajectoryDistances.reduce((a, b) => (a.distance > b.distance ? a : b))
-      : null;
-
-    // Average distance per trajectory
-    const avgDistance = totalTrajectories > 0 ? globalDistance / totalTrajectories : 0;
-
-    // Most locations in a single trajectory
-    const mostLocations = trajectories.length > 0
-      ? trajectories.reduce((a, b) =>
-          a.locations.length > b.locations.length ? a : b
-        )
-      : null;
-
-    // Sort trajectories by distance for ranking
-    const ranked = [...trajectoryDistances]
-      .sort((a, b) => b.distance - a.distance)
-      .slice(0, 5);
-
-    // Year distribution
+  // Year distribution for countries
+  const countryYearData = useMemo(() => {
     const yearMap: Record<string, number> = {};
-    for (const t of trajectories) {
-      const year = new Date(t.startDate).getFullYear().toString();
+    for (const c of countries) {
+      const year = new Date(c.visitedAt).getFullYear().toString();
       yearMap[year] = (yearMap[year] || 0) + 1;
     }
-    const yearData = Object.entries(yearMap)
+    return Object.entries(yearMap)
       .sort(([a], [b]) => b.localeCompare(a))
       .map(([year, count]) => ({ year, count }));
-
-    return {
-      totalTrajectories,
-      totalLocations,
-      globalDistance,
-      globalDays,
-      longest,
-      avgDistance,
-      mostLocations,
-      ranked,
-      yearData,
-    };
-  }, [trajectories]);
+  }, [countries]);
 
   return (
-    <AnimatePresence>
-      {open && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/10 dark:bg-black/40 backdrop-blur-sm z-40"
-            onClick={onClose}
-          />
-          {/* Panel */}
-          <motion.div
-            initial={{ opacity: 0, x: 320 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 320 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="fixed right-0 top-0 bottom-0 w-[340px] sm:w-[380px] bg-white dark:bg-neutral-900 shadow-2xl z-50 flex flex-col"
-          >
-            {/* Header */}
-            <div className="px-5 pt-5 pb-3 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-neutral-500" />
-                <h2 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">旅行统计</h2>
+    <div className={`w-full h-full overflow-hidden bg-white dark:bg-neutral-950 ${className}`}>
+      <ScrollArea className="h-full">
+        <div className="max-w-2xl mx-auto p-5 sm:p-8 space-y-6">
+          {/* Header */}
+          <div className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-neutral-500" />
+            <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">旅行统计</h2>
+          </div>
+
+          {/* Summary cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <StatCard
+              icon={<Globe2 className="h-4 w-4" />}
+              label="已探索国家"
+              value={countries.length.toString()}
+              sub="全球 195 国"
+              accent="text-emerald-600"
+            />
+            <StatCard
+              icon={<Navigation className="h-4 w-4" />}
+              label="已到省份"
+              value={provinceCount.toString()}
+              sub="全国 34 省级行政区"
+              accent="text-amber-600"
+            />
+            <StatCard
+              icon={<MapPin className="h-4 w-4" />}
+              label="已到城市"
+              value={cityCount.toString()}
+              accent="text-rose-600"
+            />
+            <StatCard
+              icon={<Calendar className="h-4 w-4" />}
+              label="记录总数"
+              value={(countries.length + places.length).toString()}
+              accent="text-violet-600"
+            />
+          </div>
+
+          {/* Coverage progress */}
+          <Card className="border-neutral-100 dark:border-neutral-800">
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">全球覆盖率</span>
+                <span className="text-sm font-mono text-neutral-500 dark:text-neutral-400">
+                  {countries.length}/195 ({((countries.length / 195) * 100).toFixed(1)}%)
+                </span>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={onClose}
-              >
-                <X className="h-4 w-4" />
-              </Button>
+              <div className="h-2 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-500 transition-all duration-500"
+                  style={{ width: `${Math.min((countries.length / 195) * 100, 100)}%` }}
+                />
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">中国覆盖率</span>
+                <span className="text-sm font-mono text-neutral-500 dark:text-neutral-400">
+                  {provinceCount}/34 ({((provinceCount / 34) * 100).toFixed(1)}%)
+                </span>
+              </div>
+              <div className="h-2 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-rose-400 to-rose-500 transition-all duration-500"
+                  style={{ width: `${Math.min((provinceCount / 34) * 100, 100)}%` }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Recent countries */}
+          {recentCountries.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-1.5">
+                <Globe2 className="h-3.5 w-3.5 text-neutral-400" />
+                <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                  最近探索的国家
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {recentCountries.map((c) => (
+                  <div
+                    key={c.code}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200/50 dark:border-amber-800/30"
+                  >
+                    <div className="w-2 h-2 rounded-full bg-amber-400" />
+                    <span className="text-sm text-neutral-700 dark:text-neutral-300">{c.nameZh || c.name}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <Separator />
+          )}
 
-            <ScrollArea className="flex-1">
-              <div className="p-5 space-y-5">
-                {/* Summary cards */}
-                <div className="grid grid-cols-2 gap-3">
-                  <StatCard
-                    icon={<Route className="h-4 w-4" />}
-                    label="总里程"
-                    value={formatDistance(stats.globalDistance)}
-                    accent="text-emerald-600"
-                  />
-                  <StatCard
-                    icon={<Calendar className="h-4 w-4" />}
-                    label="总天数"
-                    value={formatDuration(stats.globalDays)}
-                    accent="text-amber-600"
-                  />
-                  <StatCard
-                    icon={<MapPin className="h-4 w-4" />}
-                    label="地点总数"
-                    value={stats.totalLocations.toString()}
-                    accent="text-rose-600"
-                  />
-                  <StatCard
-                    icon={<Globe2 className="h-4 w-4" />}
-                    label="轨迹总数"
-                    value={stats.totalTrajectories.toString()}
-                    accent="text-violet-600"
-                  />
-                </div>
-
-                {/* Quick stats */}
-                <Card className="border-neutral-100 dark:border-neutral-800">
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-neutral-500 dark:text-neutral-400">平均轨迹距离</span>
-                      <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                        {formatDistance(stats.avgDistance)}
-                      </span>
-                    </div>
-                    <Separator />
-                    {stats.longest && (
-                      <>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-neutral-500 dark:text-neutral-400">最长轨迹</span>
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="w-2.5 h-2.5 rounded-full"
-                              style={{ backgroundColor: stats.longest.color }}
-                            />
-                            <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200 max-w-[140px] truncate">
-                              {stats.longest.name}
-                            </span>
-                          </div>
-                        </div>
-                        <Separator />
-                      </>
-                    )}
-                    {stats.mostLocations && (
-                      <>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-neutral-500 dark:text-neutral-400">最多地点轨迹</span>
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="w-2.5 h-2.5 rounded-full"
-                              style={{ backgroundColor: stats.mostLocations.color }}
-                            />
-                            <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200 max-w-[140px] truncate">
-                              {stats.mostLocations.name}
-                            </span>
-                            <span className="text-xs text-neutral-400 dark:text-neutral-500">
-                              ({stats.mostLocations.locations.length})
-                            </span>
-                          </div>
-                        </div>
-                        <Separator />
-                      </>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-neutral-500 dark:text-neutral-400">日均行程</span>
-                      <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                        {stats.globalDays > 0
-                          ? formatDistance(stats.globalDistance / stats.globalDays)
-                          : '—'}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Distance ranking */}
-                {stats.ranked.length > 0 && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-1.5">
-                      <TrendingUp className="h-3.5 w-3.5 text-neutral-400" />
-                      <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                        距离排名
-                      </span>
-                    </div>
-                    <div className="space-y-2">
-                      {stats.ranked.map((item, idx) => {
-                        const maxDist = stats.ranked[0]?.distance || 1;
-                        const pct = (item.distance / maxDist) * 100;
-                        return (
-                          <div key={idx} className="space-y-1">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className="text-xs font-mono text-neutral-400 w-4 shrink-0">
-                                  {idx + 1}
-                                </span>
-                                <span className="text-sm text-neutral-700 dark:text-neutral-300 truncate">
-                                  {item.name}
-                                </span>
-                              </div>
-                              <span className="text-xs font-mono text-neutral-500 dark:text-neutral-400 shrink-0 ml-2">
-                                {formatDistance(item.distance)}
-                              </span>
-                            </div>
-                            <div className="h-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
-                              <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: `${pct}%` }}
-                                transition={{ duration: 0.6, delay: idx * 0.1 }}
-                                className="h-full rounded-full"
-                                style={{ backgroundColor: item.color }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Year distribution */}
-                {stats.yearData.length > 0 && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5 text-neutral-400" />
-                      <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                        年度分布
-                      </span>
-                    </div>
-                    <div className="flex gap-2 flex-wrap">
-                      {stats.yearData.map((item) => (
-                        <div
-                          key={item.year}
-                          className="px-3 py-1.5 bg-neutral-50 dark:bg-neutral-800 rounded-lg text-center"
-                        >
-                          <div className="text-base font-bold text-neutral-800 dark:text-neutral-200">
-                            {item.count}
-                          </div>
-                          <div className="text-[10px] text-neutral-400 font-mono">
-                            {item.year}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+          {/* Recent places */}
+          {recentPlaces.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5 text-neutral-400" />
+                <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                  最近到访的城市
+                </span>
               </div>
-            </ScrollArea>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+              <div className="flex flex-wrap gap-2">
+                {recentPlaces.map((p) => (
+                  <div
+                    key={p.id}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200/50 dark:border-amber-800/30"
+                  >
+                    <div className="w-2 h-2 rounded-full bg-amber-400" />
+                    <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                      {p.province ? `${p.province} · ` : ''}{p.name}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Year distribution */}
+          {countryYearData.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-1.5">
+                <TrendingUp className="h-3.5 w-3.5 text-neutral-400" />
+                <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                  年度探索分布
+                </span>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {countryYearData.map((item) => (
+                  <div
+                    key={item.year}
+                    className="px-3 py-1.5 bg-neutral-50 dark:bg-neutral-800 rounded-lg text-center"
+                  >
+                    <div className="text-base font-bold text-neutral-800 dark:text-neutral-200">{item.count}</div>
+                    <div className="text-[10px] text-neutral-400 font-mono">{item.year}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Empty state */}
+          {countries.length === 0 && places.length === 0 && (
+            <div className="text-center py-16">
+              <Globe2 className="h-12 w-12 text-neutral-200 dark:text-neutral-700 mx-auto mb-4" />
+              <p className="text-neutral-400 text-sm">还没有探索记录</p>
+              <p className="text-neutral-300 dark:text-neutral-600 text-xs mt-1">切换到世界地图或中国地图，点击国家/省份开始记录</p>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+    </div>
   );
 }
 
@@ -310,11 +251,13 @@ function StatCard({
   icon,
   label,
   value,
+  sub,
   accent,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
+  sub?: string;
   accent: string;
 }) {
   return (
@@ -322,9 +265,8 @@ function StatCard({
       <CardContent className="p-3">
         <div className={`mb-1.5 ${accent}`}>{icon}</div>
         <div className="text-lg font-bold text-neutral-900 dark:text-neutral-100 leading-none">{value}</div>
-        <div className="text-[10px] text-neutral-400 uppercase tracking-wider mt-1">
-          {label}
-        </div>
+        <div className="text-[10px] text-neutral-400 uppercase tracking-wider mt-1">{label}</div>
+        {sub && <div className="text-[9px] text-neutral-300 dark:text-neutral-600 mt-0.5">{sub}</div>}
       </CardContent>
     </Card>
   );

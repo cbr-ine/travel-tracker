@@ -642,3 +642,79 @@ Stage Summary:
 - Dark mode scrollbar: now visible in both themes
 - All 16 prior task fixes confirmed intact
 - Zero new lint errors introduced
+
+---
+Task ID: 5
+Agent: full-stack-developer (subagent)
+Task: Build interactive ChinaMap component with province/city boundaries
+
+Work Log:
+- Installed d3-geo@3.1.1 and @types/d3-geo@3.1.0 for geographic projections
+- Discovered store.ts was rewritten by a parallel task (useTrajectoryStore removed), breaking page.tsx and TrajectoryFormDialog.tsx
+- Rebuilt store.ts to export both useTrajectoryStore (with Trajectory, VisitedPlace, mapMode='globe'|'flat'|'china') and useTravelStore
+- Added Trajectory and Location Prisma models back to schema.prisma (removed by parallel task) and ran db:push
+- Created src/components/map/ChinaMap.tsx (~520 lines) with:
+  - GeoJSON fetch from DataV CDN (https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json)
+  - d3-geo Mercator projection centered on China [104, 35] with auto-fitSize
+  - SVG path rendering for all 34 provinces with proper boundaries
+  - Interactive zoom (mouse wheel + double-click) with zoom-to-cursor
+  - Interactive pan (click + drag) using state-based isPanning
+  - Province click to toggle visited/unvisited via onTogglePlace callback
+  - Visited provinces: warm yellow rgba(251,191,36,0.65) with glow filter
+  - Unvisited provinces: light gray (#e5e7eb) / dark (#262626) based on isDark prop
+  - Province abbreviation labels (京/津/冀/晋/蒙 etc.) centered via path.centroid()
+  - Full dark mode support (background, borders, labels, text)
+  - South China Sea inset box in bottom-right corner for Hainan + islands
+  - Hover tooltip showing province name + checkmark for visited
+  - Count badge "X/34 省份" in top-left
+  - "CHINA MAP" pixel font title (Geist Mono, uppercase, letter-spacing)
+  - Reset view button when zoomed, zoom indicator in bottom-left
+  - Loading spinner with retry button on fetch error
+  - Responsive container with ResizeObserver
+- Integrated ChinaMap into page.tsx as third map mode ('china'):
+  - Dynamic import with { ssr: false }
+  - New toggle button "中" in header map mode group
+  - Dual-mounted with CSS opacity toggle (same pattern as globe/flat)
+  - Connected to store via visitedPlaces and toggleVisitedPlace
+- Fixed lint: ref access during render (changed isPanning from useRef to useState, used useEffect for ref sync)
+
+Stage Summary:
+- New file: src/components/map/ChinaMap.tsx (interactive China province map)
+- Modified files: src/lib/store.ts (restored trajectory store + travel store), prisma/schema.prisma (restored Trajectory/Location models), src/app/page.tsx (added China map integration)
+- App compiles cleanly: GET / 200, GET /api/trajectories 200
+- Zero new lint errors in ChinaMap, store, or page files
+- Three map modes: 3D Globe, 2D Flat Map, China Province Map
+
+---
+Task ID: 4
+Agent: full-stack-developer (subagent)
+Task: Build interactive WorldMap component with real country boundaries
+
+Work Log:
+- Installed d3-geo and @types/d3-geo packages
+- Created WorldMap.tsx at src/components/map/WorldMap.tsx
+- Implemented TopoJSON fetching from CDN (world-atlas@2 countries-110m.json)
+- Used topojson-client feature() to convert TopoJSON → GeoJSON features
+- Used d3-geo geoNaturalEarth1() projection with fitSize for proper world map rendering
+- Built ISO 3166-1 numeric → alpha-2 mapping covering ~195 countries
+- Built Chinese name mapping for ~170 countries
+- Implemented interactive zoom/pan: mouse wheel zoom (towards cursor), click-drag pan, double-click zoom
+- CSS transform on SVG <g> group for smooth zoom/pan (min zoom 1x, max zoom 8x)
+- Implemented visited/unvisited country coloring: warm yellow with glow (visited), gray (unvisited)
+- Hover effects: brighter fill on unvisited, intensified glow on visited
+- Click-to-toggle visited status via onToggleCountry callback
+- Tooltip on hover showing Chinese name (when available) + English name + visited indicator dot
+- "WORLD MAP" title in top-left with monospace font, uppercase, letter-spacing
+- Country count badge "X/195 已探索" in top-right corner
+- Full dark mode support via isDark prop: ocean, land, borders, title, badge, tooltip colors all theme-aware
+- Loading spinner state while fetching map data
+- Error state display when fetch fails
+- Responsive via ResizeObserver for container dimensions
+- Fixed TypeScript type issues with topojson-client and d3-geo strict typing
+
+Stage Summary:
+- New file: src/components/map/WorldMap.tsx (~590 lines)
+- New packages: d3-geo, @types/d3-geo
+- Self-contained component: only depends on topojson-client and d3-geo
+- Props interface: visitedCountries, onToggleCountry, isDark, className
+- Zero lint errors introduced (pre-existing errors in generate-prd.js and ChinaMap.tsx are unrelated)

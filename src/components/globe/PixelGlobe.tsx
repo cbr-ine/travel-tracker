@@ -2,10 +2,6 @@
 
 import dynamic from 'next/dynamic';
 
-// ─── Re-export types from TrajectoryLayer to avoid duplication ───
-export type { Trajectory, TrajectoryPoint } from './TrajectoryLayer';
-import type { Trajectory } from './TrajectoryLayer';
-
 // ─── Lazy load the entire Three.js scene to avoid SSR issues ───
 
 const GlobeScene = dynamic(() => import('./GlobeScene'), {
@@ -23,24 +19,14 @@ const GlobeScene = dynamic(() => import('./GlobeScene'), {
 });
 
 export interface PixelGlobeProps {
-  trajectories?: Trajectory[];
-  onTrajectoryClick?: (trajectory: Trajectory) => void;
   className?: string;
-  radius?: number;
-  autoRotate?: boolean;
-  focusTrajectoryId?: string | null;
   isDark?: boolean;
 }
 
 // ─── Main Component ───
 
 export default function PixelGlobe({
-  trajectories = [],
-  onTrajectoryClick,
   className = '',
-  radius = 2,
-  autoRotate = true,
-  focusTrajectoryId,
   isDark = false,
 }: PixelGlobeProps) {
   return (
@@ -48,14 +34,7 @@ export default function PixelGlobe({
       className={`relative w-full h-full ${className}`}
       style={{ minHeight: '300px' }}
     >
-      <GlobeScene
-        trajectories={trajectories}
-        onTrajectoryClick={onTrajectoryClick}
-        radius={radius}
-        autoRotate={autoRotate}
-        focusTrajectoryId={focusTrajectoryId}
-        isDark={isDark}
-      />
+      <GlobeScene isDark={isDark} />
     </div>
   );
 }
