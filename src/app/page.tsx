@@ -199,6 +199,7 @@ export default function Home() {
               <Button
                 variant="outline"
                 size="icon"
+                aria-label="打开菜单"
                 className="h-10 w-10 rounded-xl border-neutral-200 dark:border-neutral-700 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm shadow-sm hover:bg-neutral-50 dark:hover:bg-neutral-800"
               >
                 <Menu className="h-4 w-4 text-neutral-700 dark:text-neutral-300" />
@@ -226,6 +227,7 @@ export default function Home() {
                   {searchQuery && (
                     <button
                       onClick={() => setSearchQuery('')}
+                      aria-label="清除搜索"
                       className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
                     >
                       <X className="h-3.5 w-3.5" />
@@ -314,6 +316,7 @@ export default function Home() {
                             <Button
                               variant="ghost"
                               size="icon"
+                              aria-label="编辑轨迹"
                               className="h-7 w-7"
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -326,6 +329,7 @@ export default function Home() {
                             <Button
                               variant="ghost"
                               size="icon"
+                              aria-label="删除轨迹"
                               className="h-7 w-7 text-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950"
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -520,6 +524,7 @@ export default function Home() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      aria-label="编辑轨迹"
                       className="h-8 w-8"
                       onClick={() => {
                         setEditingTrajectory(detailTrajectory);
@@ -531,6 +536,7 @@ export default function Home() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      aria-label="删除轨迹"
                       className="h-8 w-8 text-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950"
                       onClick={() => handleDelete(detailTrajectory.id)}
                     >
@@ -539,6 +545,7 @@ export default function Home() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      aria-label="关闭详情"
                       className="h-8 w-8"
                       onClick={() => setDetailPanelOpen(false)}
                     >

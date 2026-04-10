@@ -4,7 +4,7 @@
  * Haversine formula: calculates the great-circle distance between two lat/lng points.
  * Returns distance in kilometers.
  */
-export function haversineDistance(
+function haversineDistance(
   lat1: number,
   lng1: number,
   lat2: number,
@@ -76,54 +76,4 @@ export function formatDuration(days: number, locale: string = 'zh-CN'): string {
   const weeks = Math.floor(days / 7);
   const remainDays = days % 7;
   return remainDays > 0 ? `${weeks}w ${remainDays}d` : `${weeks}w`;
-}
-
-/**
- * Get the bounding box of a set of locations.
- */
-export function getBoundingBox(
-  locations: { lat: number; lng: number }[]
-): { minLat: number; maxLat: number; minLng: number; maxLng: number } | null {
-  if (locations.length === 0) return null;
-  let minLat = Infinity, maxLat = -Infinity;
-  let minLng = Infinity, maxLng = -Infinity;
-  for (const loc of locations) {
-    minLat = Math.min(minLat, loc.lat);
-    maxLat = Math.max(maxLat, loc.lat);
-    minLng = Math.min(minLng, loc.lng);
-    maxLng = Math.max(maxLng, loc.lng);
-  }
-  return { minLat, maxLat, minLng, maxLng };
-}
-
-/**
- * Get center point of a set of locations.
- */
-export function getCenterPoint(
-  locations: { lat: number; lng: number }[]
-): { lat: number; lng: number } | null {
-  if (locations.length === 0) return null;
-  let sumLat = 0, sumLng = 0;
-  for (const loc of locations) {
-    sumLat += loc.lat;
-    sumLng += loc.lng;
-  }
-  return {
-    lat: sumLat / locations.length,
-    lng: sumLng / locations.length,
-  };
-}
-
-/**
- * Convert lat/lng to equirectangular projection (2D map).
- * Returns x, y in range [-0.5, 0.5].
- */
-export function latLngToFlat(
-  lat: number,
-  lng: number
-): { x: number; y: number } {
-  return {
-    x: lng / 360,
-    y: -lat / 180,
-  };
 }
