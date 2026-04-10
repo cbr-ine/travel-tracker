@@ -131,6 +131,7 @@ export default function GlobeScene({
       }}
     >
       <color attach="background" args={['#ffffff']} />
+      <color attach="fog" args={['#ffffff']} />
       <ambientLight intensity={1} />
 
       <Suspense fallback={<GlobeLoadingFallback />}>

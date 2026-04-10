@@ -133,7 +133,17 @@ function InstancedDots({
 
       // Orient circle to face outward from sphere center
       const normal = new THREE.Vector3(x, y, z).normalize();
-      dummy.quaternion.setFromUnitVectors(up, normal);
+      // Handle edge case when normal is parallel/antiparallel to up (poles)
+      const dot = normal.dot(up);
+      if (Math.abs(dot) > 0.9999) {
+        if (dot < 0) {
+          dummy.quaternion.setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI);
+        } else {
+          dummy.quaternion.identity();
+        }
+      } else {
+        dummy.quaternion.setFromUnitVectors(up, normal);
+      }
 
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);

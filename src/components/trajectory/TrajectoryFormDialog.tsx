@@ -17,7 +17,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { useLoveTracksStore } from '@/lib/store';
+import { useTrajectoryStore } from '@/lib/store';
 
 // ─── Color presets ───
 const COLOR_PRESETS = [
@@ -53,7 +53,7 @@ export default function TrajectoryFormDialog({
   onOpenChange,
   onSuccess,
 }: TrajectoryFormDialogProps) {
-  const editingTrajectory = useLoveTracksStore((s) => s.editingTrajectory);
+  const editingTrajectory = useTrajectoryStore((s) => s.editingTrajectory);
 
   const [name, setName] = useState('');
   const [startDate, setStartDate] = useState('');

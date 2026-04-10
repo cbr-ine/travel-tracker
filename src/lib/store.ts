@@ -26,7 +26,7 @@ export type MapMode = 'globe' | 'flat';
 
 // ─── State ───
 
-interface LoveTracksState {
+interface TrajectoryStoreState {
   trajectories: Trajectory[];
   selectedTrajectoryId: string | null;
   sidebarOpen: boolean;
@@ -58,7 +58,7 @@ interface LoveTracksState {
   setStatsPanelOpen: (open: boolean) => void;
 }
 
-export const useLoveTracksStore = create<LoveTracksState>((set) => ({
+export const useTrajectoryStore = create<TrajectoryStoreState>((set) => ({
   trajectories: [],
   selectedTrajectoryId: null,
   sidebarOpen: false,

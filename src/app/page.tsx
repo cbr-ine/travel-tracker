@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTheme } from 'next-themes';
 import {
   MapPin, Plus, Menu, X, Trash2, Edit2, Calendar, Map,
   Search, BarChart3, Globe2, LayoutGrid, Route, Clock,
-  Navigation, ChevronRight,
+  Navigation, ChevronRight, Sun, Moon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -16,7 +17,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Trajectory, useLoveTracksStore } from '@/lib/store';
+import { Trajectory, useTrajectoryStore } from '@/lib/store';
 import {
   totalRouteDistance, formatDistance, tripDurationDays, formatDuration,
 } from '@/lib/geo';
@@ -43,6 +44,7 @@ function formatDate(dateStr: string): string {
 // ─── Main Page ───
 
 export default function Home() {
+  const { theme, setTheme } = useTheme();
   const {
     trajectories,
     isLoading,
@@ -65,7 +67,7 @@ export default function Home() {
     setFocusTrajectoryId,
     statsPanelOpen,
     setStatsPanelOpen,
-  } = useLoveTracksStore();
+  } = useTrajectoryStore();
 
   // Fetch trajectories on mount
   const fetchTrajectories = useCallback(async () => {
@@ -186,7 +188,7 @@ export default function Home() {
   }, [detailTrajectory]);
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-white overflow-hidden relative">
+    <div className="h-screen w-screen flex flex-col bg-white dark:bg-neutral-950 overflow-hidden relative">
       {/* ─── Header ─── */}
       <header className="absolute top-0 left-0 right-0 z-30 px-4 sm:px-6 pt-4 sm:pt-5 flex items-start justify-between pointer-events-none">
         <div className="pointer-events-auto flex items-center gap-2">
@@ -195,9 +197,9 @@ export default function Home() {
               <Button
                 variant="outline"
                 size="icon"
-                className="h-10 w-10 rounded-xl border-neutral-200 bg-white/80 backdrop-blur-sm shadow-sm hover:bg-neutral-50"
+                className="h-10 w-10 rounded-xl border-neutral-200 dark:border-neutral-700 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm shadow-sm hover:bg-neutral-50 dark:hover:bg-neutral-800"
               >
-                <Menu className="h-4 w-4 text-neutral-700" />
+                <Menu className="h-4 w-4 text-neutral-700 dark:text-neutral-300" />
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-80 sm:w-96 p-0">
@@ -343,14 +345,14 @@ export default function Home() {
 
         {/* Center title */}
         <div className="pointer-events-none hidden sm:block">
-          <h1 className="text-xl font-bold text-neutral-900 tracking-tight">轨迹记录</h1>
+          <h1 className="text-xl font-bold text-neutral-900 dark:text-neutral-100 tracking-tight">轨迹记录</h1>
           <p className="text-xs text-neutral-400 text-center mt-0.5">Travel Tracker</p>
         </div>
 
         {/* Right side controls */}
         <div className="pointer-events-auto flex items-center gap-2">
           {/* Map mode toggle */}
-          <div className="flex items-center gap-1 px-1 py-1 rounded-xl bg-white/80 backdrop-blur-sm shadow-sm border border-neutral-200">
+          <div className="flex items-center gap-1 px-1 py-1 rounded-xl bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm shadow-sm border border-neutral-200 dark:border-neutral-700">
             <ToggleGroup
               type="single"
               value={mapMode}
@@ -362,7 +364,7 @@ export default function Home() {
               <ToggleGroupItem
                 value="globe"
                 size="sm"
-                className="h-8 w-8 rounded-lg data-[state=on]:bg-neutral-900 data-[state=on]:text-white p-0"
+                className="h-8 w-8 rounded-lg data-[state=on]:bg-neutral-900 data-[state=on]:text-white dark:data-[state=on]:bg-neutral-100 dark:data-[state=on]:text-neutral-900 p-0"
                 aria-label="3D Globe"
               >
                 <Globe2 className="h-4 w-4" />
@@ -370,7 +372,7 @@ export default function Home() {
               <ToggleGroupItem
                 value="flat"
                 size="sm"
-                className="h-8 w-8 rounded-lg data-[state=on]:bg-neutral-900 data-[state=on]:text-white p-0"
+                className="h-8 w-8 rounded-lg data-[state=on]:bg-neutral-900 data-[state=on]:text-white dark:data-[state=on]:bg-neutral-100 dark:data-[state=on]:text-neutral-900 p-0"
                 aria-label="2D Map"
               >
                 <LayoutGrid className="h-4 w-4" />
@@ -378,55 +380,54 @@ export default function Home() {
             </ToggleGroup>
           </div>
 
+          {/* Dark mode toggle */}
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-10 w-10 rounded-xl border-neutral-200 bg-white/80 dark:bg-neutral-900/80 dark:border-neutral-700 backdrop-blur-sm shadow-sm hover:bg-neutral-50 dark:hover:bg-neutral-800"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          >
+            <Sun className="h-4 w-4 text-neutral-700 dark:hidden" />
+            <Moon className="h-4 w-4 text-neutral-300 hidden dark:block" />
+          </Button>
+
           {/* Stats button */}
           <Button
             variant="outline"
             size="icon"
-            className="h-10 w-10 rounded-xl border-neutral-200 bg-white/80 backdrop-blur-sm shadow-sm hover:bg-neutral-50"
+            className="h-10 w-10 rounded-xl border-neutral-200 bg-white/80 dark:bg-neutral-900/80 dark:border-neutral-700 backdrop-blur-sm shadow-sm hover:bg-neutral-50 dark:hover:bg-neutral-800"
             onClick={() => setStatsPanelOpen(true)}
           >
-            <BarChart3 className="h-4 w-4 text-neutral-700" />
+            <BarChart3 className="h-4 w-4 text-neutral-700 dark:text-neutral-300" />
           </Button>
         </div>
       </header>
 
       {/* ─── Globe / Flat Map ─── */}
       <div className="flex-1 relative">
-        <AnimatePresence mode="wait">
-          {mapMode === 'globe' ? (
-            <motion.div
-              key="globe"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="absolute inset-0"
-            >
-              <PixelGlobe
-                trajectories={mapTrajectories}
-                onTrajectoryClick={handleMapTrajectoryClick}
-                focusTrajectoryId={focusTrajectoryId}
-                className="w-full h-full"
-              />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="flat"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="absolute inset-0"
-            >
-              <FlatMap
-                trajectories={mapTrajectories}
-                onTrajectoryClick={handleMapTrajectoryClick}
-                focusTrajectoryId={focusTrajectoryId}
-                className="w-full h-full"
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Keep both mounted to prevent unmount/remount flash */}
+        <div
+          className="absolute inset-0 transition-opacity duration-300"
+          style={{ opacity: mapMode === 'globe' ? 1 : 0, pointerEvents: mapMode === 'globe' ? 'auto' : 'none' }}
+        >
+          <PixelGlobe
+            trajectories={mapTrajectories}
+            onTrajectoryClick={handleMapTrajectoryClick}
+            focusTrajectoryId={focusTrajectoryId}
+            className="w-full h-full"
+          />
+        </div>
+        <div
+          className="absolute inset-0 transition-opacity duration-300"
+          style={{ opacity: mapMode === 'flat' ? 1 : 0, pointerEvents: mapMode === 'flat' ? 'auto' : 'none' }}
+        >
+          <FlatMap
+            trajectories={mapTrajectories}
+            onTrajectoryClick={handleMapTrajectoryClick}
+            focusTrajectoryId={focusTrajectoryId}
+            className="w-full h-full"
+          />
+        </div>
 
         {/* Loading overlay */}
         <AnimatePresence>
@@ -435,10 +436,10 @@ export default function Home() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center z-10"
+              className="absolute inset-0 bg-white/60 dark:bg-neutral-950/60 backdrop-blur-sm flex items-center justify-center z-10"
             >
               <div className="flex flex-col items-center gap-3">
-                <div className="w-8 h-8 border-2 border-neutral-200 border-t-neutral-600 rounded-full animate-spin" />
+                <div className="w-8 h-8 border-2 border-neutral-200 dark:border-neutral-700 border-t-neutral-600 dark:border-t-neutral-300 rounded-full animate-spin" />
                 <span className="text-xs text-neutral-400">加载中...</span>
               </div>
             </motion.div>
@@ -449,7 +450,7 @@ export default function Home() {
       {/* ─── Stats bar at bottom ─── */}
       <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none">
         <div className="flex justify-center pb-5">
-          <div className="pointer-events-auto flex items-center gap-3 px-4 py-2 rounded-full bg-white/80 backdrop-blur-sm shadow-sm border border-neutral-100">
+          <div className="pointer-events-auto flex items-center gap-3 px-4 py-2 rounded-full bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm shadow-sm border border-neutral-100 dark:border-neutral-800">
             <Badge variant="secondary" className="font-mono text-xs px-2.5">
               {trajectories.length} 轨迹
             </Badge>
@@ -472,7 +473,7 @@ export default function Home() {
         whileTap={{ scale: 0.95 }}
       >
         <Button
-          onClick={() => useLoveTracksStore.getState().setFormDialogOpen(true)}
+          onClick={() => useTrajectoryStore.getState().setFormDialogOpen(true)}
           className="h-14 w-14 rounded-full shadow-lg bg-neutral-900 hover:bg-neutral-800 text-white"
           size="icon"
         >
@@ -490,7 +491,7 @@ export default function Home() {
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             className="absolute inset-x-4 bottom-20 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[480px] z-40"
           >
-            <div className="bg-white rounded-2xl shadow-2xl border border-neutral-100 overflow-hidden">
+            <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-neutral-100 dark:border-neutral-800 overflow-hidden">
               {/* Header */}
               <div className="px-5 pt-5 pb-3">
                 <div className="flex items-start justify-between">
@@ -500,7 +501,7 @@ export default function Home() {
                       style={{ backgroundColor: detailTrajectory.color, ringColor: detailTrajectory.color + '40' }}
                     />
                     <div>
-                      <h3 className="font-semibold text-base text-neutral-900">{detailTrajectory.name}</h3>
+                      <h3 className="font-semibold text-base text-neutral-900 dark:text-neutral-100">{detailTrajectory.name}</h3>
                       <div className="flex items-center gap-1.5 text-xs text-neutral-400 mt-0.5">
                         <Calendar className="h-3 w-3" />
                         {formatDate(detailTrajectory.startDate)}
@@ -637,11 +638,11 @@ export default function Home() {
       <TrajectoryFormDialog
         open={formDialogOpen}
         onOpenChange={(open) => {
-          if (!open) useLoveTracksStore.getState().setFormDialogOpen(false);
+          if (!open) useTrajectoryStore.getState().setFormDialogOpen(false);
         }}
         onSuccess={() => {
           fetchTrajectories();
-          useLoveTracksStore.getState().setFormDialogOpen(false);
+          useTrajectoryStore.getState().setFormDialogOpen(false);
         }}
       />
     </div>

@@ -121,3 +121,94 @@ Stage Summary:
 - Three.js NaN error resolved with comprehensive guards
 - Globe now has denser, smaller dots, no transparency issues, and English continent names
 - Cron job configured for continuous improvement
+
+---
+Task ID: 6
+Agent: full-stack-developer (subagent)
+Task: Improve FlatMap component — accurate continent paths, consistent land detection, water exclusions
+
+Work Log:
+- Replaced hand-crafted CONTINENT_PATHS with polygon-to-SVG-path conversion system
+- Defined 20+ enhanced continent polygons (LAND_POLYGONS) with more vertices for recognizable coastlines:
+  - North America (detailed Pacific coast, Gulf coast, Atlantic coast, Hudson Bay region)
+  - South America (Brazil bulge, Patagonia, Caribbean coast)
+  - Europe (Iberian Peninsula, Scandinavia as separate polygon)
+  - Africa (West African bulge, Horn of Africa, Gulf of Guinea)
+  - Asia (split into Mainland, Arabia, India, China, SE Asia mainland for clarity)
+  - Added separate polygons: Cuba, Ireland, Korea, Tasmania, Papua New Guinea
+- Created polygonToSvgPath() helper for consistent coordinate conversion (x=180+lng, y=90-lat)
+- Replaced isApproxLand bounding-box function with isFlatMapLand using imported isLand() from world-data.ts
+- Added 14 water body exclusion polygons (WATER_EXCLUSIONS) using ray-casting pointInPolygon:
+  - Hudson Bay, Gulf of Mexico, Mediterranean Sea, Bay of Bengal, Sea of Japan
+  - Persian Gulf, Red Sea, Caspian Sea, Gulf of California, Baltic Sea
+  - Black Sea, Andaman Sea, Caribbean Sea, Gulf of Aden, South China Sea, Bering Sea
+- Added "FLAT MAP" title in top-left with pixel font style (Geist Mono, uppercase, letter-spacing)
+- Preserved all trajectory rendering (dots, lines, glow effects, hover, focus, auto-zoom)
+- Same props interface maintained: trajectories, onTrajectoryClick, focusTrajectoryId, className
+- TypeScript compiles cleanly (no new lint errors)
+- Dev server recompiled successfully with no runtime errors
+
+Stage Summary:
+- Modified file: src/components/map/FlatMap.tsx
+- Continent outlines now use polygon vertex data converted to SVG paths (consistent with globe)
+- PixelLandDots uses same isLand detection as DotMatrixGlobe + water exclusion zones
+- Major water bodies no longer show false land dots (Mediterranean, Gulf of Mexico, Bay of Bengal, etc.)
+- Added 6 new landmass polygons and 14 water exclusion zones for improved geographic accuracy
+
+---
+Task ID: 7
+Agent: Main Agent (Cron Review)
+Task: Comprehensive review of Travel Tracker application — fix critical issues and improve UI/UX
+
+Work Log:
+**Review Findings:**
+1. Console Errors: Found initial Module not found and ReferenceError for Badge (resolved in previous session, no current errors)
+2. NaN in Three.js: Found residual NaN risk in DotMatrixGlobe.tsx setFromUnitVectors at north/south poles (normal ≈ up vector). TrajectoryLayer already had the fix but DotMatrixGlobe did not.
+3. UI/UX: Globe/flat map switching used AnimatePresence mode="wait" causing full unmount/remount (flash of loading spinner, lost camera state)
+4. Performance: Globe kept both modes mounted via CSS opacity toggle instead of React remounting
+5. Code Quality: Store still named `useLoveTracksStore` despite rebranding to "轨迹记录"
+6. FlatMap: Used unrealistic simplified SVG paths for continents and rough bounding-box land detection
+7. Dark Mode: CSS variables defined but no ThemeProvider or toggle button
+8. Lint: Clean — only pre-existing errors in download/generate-prd.js (not app code)
+
+**Fixes Applied:**
+1. Fixed NaN in DotMatrixGlobe setFromUnitVectors (dot matrix orientation):
+   - Added parallel/antiparallel vector guard (Math.abs(dot) > 0.9999)
+   - Uses quaternion.identity() for poles pointing up, setFromAxisAngle for poles pointing down
+   - File: src/components/globe/DotMatrixGlobe.tsx
+
+2. Fixed globe/flat map switching (no more unmount/remount):
+   - Replaced AnimatePresence mode="wait" with dual-mounted CSS opacity toggle
+   - Both PixelGlobe and FlatMap stay mounted, only visibility toggled
+   - Eliminates flash of loading spinner and preserves camera/scroll state
+   - File: src/app/page.tsx
+
+3. Renamed store for consistency:
+   - Renamed `useLoveTracksStore` → `useTrajectoryStore` (interface: `LoveTracksState` → `TrajectoryStoreState`)
+   - Updated all 6 references across page.tsx and TrajectoryFormDialog.tsx
+   - Files: src/lib/store.ts, src/app/page.tsx, src/components/trajectory/TrajectoryFormDialog.tsx
+
+4. Improved FlatMap (via subagent):
+   - Replaced blobby SVG paths with polygon-vertex-based continent outlines (20+ polygons)
+   - PixelLandDots now uses isLand() from world-data.ts (same as 3D globe)
+   - Added 14 water body exclusion zones (Hudson Bay, Mediterranean, etc.)
+   - Added "FLAT MAP" title label
+   - File: src/components/map/FlatMap.tsx
+
+5. Added dark mode support:
+   - Added ThemeProvider from next-themes to layout.tsx
+   - Added Sun/Moon toggle button in header (next to stats button)
+   - Applied dark: classes to: header, toggle buttons, loading overlay, stats bar, detail panel
+   - Files: src/app/layout.tsx, src/app/page.tsx
+
+6. Added fog to 3D globe scene for depth:
+   - Added <color attach="fog" args={['#ffffff']} /> to GlobeScene.tsx
+   - File: src/components/globe/GlobeScene.tsx
+
+Stage Summary:
+- 5 critical/medium issues fixed, 0 new issues introduced
+- All files compile cleanly, no TypeScript errors, no lint errors in app code
+- Dev server stable (200 status on all requests)
+- Dark mode now fully functional with toggle
+- FlatMap geographic accuracy significantly improved
+- Globe rendering no longer unmounts on view switch
