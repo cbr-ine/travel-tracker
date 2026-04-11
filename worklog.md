@@ -819,3 +819,31 @@ Stage Summary:
 - File: src/components/map/ChinaMap.tsx (complete rewrite)
 - Key fix: native addEventListener with { passive: false } for wheel zoom
 - Dev log clean, no errors, all routes 200
+
+---
+Task ID: 17
+Agent: Main Agent
+Task: Refactor ChinaMap component to fix gray panel rendering issue
+
+Work Log:
+- Diagnosed gray panel issue: API returns valid GeoJSON (35 features), but map paths not rendering
+- Identified root causes:
+  1. ResizeObserver losing track when containerRef moved from loading div to map div (conditional early returns)
+  2. geoMercator() default clipExtent [[0,0],[960,500]] clipping paths on screens >960px wide
+  3. SVG attribute vs CSS sizing conflict (width attribute + w-full class)
+- Complete rewrite of ChinaMap.tsx:
+  1. Single always-mounted wrapper div (wrapperRef) — no conditional returns that change the ref target
+  2. Loading/error states rendered as overlays inside the same wrapper (not separate early returns)
+  3. Set clipExtent explicitly to match viewBox: `.clipExtent([[0,0],[w,h]])`
+  4. SVG uses inline style for width/height instead of conflicting CSS classes
+  5. Size starts as null — SVG only renders once valid dimensions confirmed
+  6. Province centroid computed via geoCentroid + projection (instead of pathGen.centroid)
+  7. console.log statements for debugging
+- Applied same clipExtent fix to WorldMap.tsx (geoNaturalEarth1 projection)
+- Improved color palette: visited provinces use solid amber (#f59e0b) instead of low-contrast rgba
+- Added strokeLinejoin="round" for cleaner borders
+
+Stage Summary:
+- Refactored files: src/components/map/ChinaMap.tsx (complete rewrite), src/components/map/WorldMap.tsx (clipExtent fix)
+- Key fix: explicit clipExtent + stable ResizeObserver target + null-size guard
+- China map should now render correctly on all screen sizes

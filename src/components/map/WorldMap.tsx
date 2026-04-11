@@ -275,7 +275,8 @@ export default function WorldMap({
     };
 
     const projection = geoNaturalEarth1()
-      .fitSize([dimensions.width, dimensions.height], featureCollection as unknown as GeoJSON.FeatureCollection);
+      .fitSize([dimensions.width, dimensions.height], featureCollection as unknown as GeoJSON.FeatureCollection)
+      .clipExtent([[0, 0], [dimensions.width, dimensions.height]]);
 
     const pathGen = geoPath(projection) as (obj: any) => string | null;
 
