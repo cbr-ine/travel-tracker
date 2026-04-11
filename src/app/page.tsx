@@ -8,10 +8,10 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { AppView, useTravelStore } from '@/lib/store';
 
-// ─── Lazy load components ───
+// ─── Lazy load heavy 3D components (SSR unsafe) ───
 const PixelGlobe = dynamic(() => import('@/components/globe/PixelGlobe'), { ssr: false });
 const WorldMap = dynamic(() => import('@/components/map/WorldMap'), { ssr: false });
-const ChinaMap = dynamic(() => import('@/components/map/ChinaMap'), { ssr: false });
+const ChinaMap = dynamic(() => import('@/components/map/ChinaMap').then(m => ({ default: m.default })), { ssr: false });
 const StatisticsPanel = dynamic(() => import('@/components/StatisticsPanel'), { ssr: false });
 
 // ─── Main Page ───
