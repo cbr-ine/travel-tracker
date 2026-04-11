@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { geoMercator, geoPath } from 'd3-geo';
 
 // ─── Types ───
@@ -19,14 +19,9 @@ interface ChinaMapProps {
   className?: string;
 }
 
-interface ProvinceFeature {
+interface GeoFeature {
   type: string;
-  properties: {
-    adcode: number;
-    name: string;
-    center?: [number, number];
-    centroid?: [number, number];
-  };
+  properties: Record<string, any>;
   geometry: GeoJSON.Geometry;
 }
 
@@ -71,10 +66,14 @@ export default function ChinaMap({
   isDark = false,
   className = '',
 }: ChinaMapProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
   // Data state
-  const [geoFeatures, setGeoFeatures] = useState<ProvinceFeature[] | null>(null);
+  const [geoFeatures, setGeoFeatures] = useState<GeoFeature[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Layout state
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
 
   // Interaction state
@@ -102,93 +101,91 @@ export default function ChinaMap({
   // Fetch GeoJSON from server proxy
   useEffect(() => {
     let cancelled = false;
-
     async function fetchData() {
       try {
         setLoading(true);
         const response = await fetch('/api/china-geojson');
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
-
         if (cancelled) return;
-
-        const features = (data.features || []) as ProvinceFeature[];
+        const features = (data.features || []) as GeoFeature[];
+        console.log('[ChinaMap] loaded', features.length, 'features');
         setGeoFeatures(features);
         setError(null);
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Failed to load map data');
-          console.error('Failed to load China map:', err);
+          console.error('[ChinaMap] fetch error:', err);
         }
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
-
     fetchData();
     return () => { cancelled = true; };
   }, []);
 
-  // Measure container
+  // ResizeObserver on container (same pattern as WorldMap)
   useEffect(() => {
-    function updateSize() {
-      setDimensions({
-        width: window.innerWidth,
-        height: window.innerHeight - 64, // subtract bottom nav
-      });
-    }
+    const container = containerRef.current;
+    if (!container) return;
+    const updateSize = () => {
+      const rect = container.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        setDimensions({ width: rect.width, height: rect.height });
+      }
+    };
     updateSize();
-    window.addEventListener('resize', updateSize);
-    return () => window.removeEventListener('resize', updateSize);
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(container);
+    return () => observer.disconnect();
   }, []);
 
   // Projection & path generator
   const pathGen = useMemo(() => {
     if (!geoFeatures || geoFeatures.length === 0) return null;
-
     const featureCollection = {
       type: 'FeatureCollection' as const,
       features: geoFeatures,
     };
-
     const projection = geoMercator()
       .fitSize([dimensions.width, dimensions.height], featureCollection as unknown as GeoJSON.FeatureCollection)
       .clipExtent([[0, 0], [dimensions.width, dimensions.height]]);
-
     return geoPath(projection) as (obj: any) => string | null;
   }, [geoFeatures, dimensions]);
 
   // Pre-compute province paths
   const provincePaths = useMemo(() => {
     if (!geoFeatures || !pathGen) return null;
-
     return geoFeatures.map((f) => {
-      const adcode = f.properties.adcode;
-      const name = f.properties.name;
+      const props = f.properties;
+      const adcode = Number(props.adcode) || 0;
+      const name = String(props.name || '');
       const isVisited = visitedSet.has(name) || visitedSet.has(String(adcode));
       const isHovered = hoveredAdcode === adcode;
-
       let fill: string;
       if (isVisited) {
         fill = isHovered ? c.visitedHover : c.visited;
       } else {
         fill = isHovered ? c.unvisitedHover : c.unvisited;
       }
-
       const d = pathGen(f) || '';
-
-      return { d, adcode, name, isVisited, isHovered, fill };
+      return { d, adcode, name, isVisited, isHovered, fill, props };
     });
   }, [geoFeatures, pathGen, visitedSet, hoveredAdcode, c]);
 
   // Province click
   const handleProvinceClick = useCallback(
-    (e: React.MouseEvent, feature: ProvinceFeature) => {
+    (e: React.MouseEvent, props: Record<string, any>) => {
       e.stopPropagation();
-      const name = feature.properties.name;
-      const adcode = String(feature.properties.adcode);
-      const center = feature.properties.center || feature.properties.centroid || [0, 0];
-      onTogglePlace(name, name, adcode, 'province', center[1], center[0]);
+      const name = String(props.name || '').trim();
+      const adcode = String(props.adcode || '');
+      const center = props.center || props.centroid;
+      const lat = Array.isArray(center) && typeof center[1] === 'number' ? center[1] : 0;
+      const lng = Array.isArray(center) && typeof center[0] === 'number' ? center[0] : 0;
+      console.log('[ChinaMap] click:', { name, adcode, lat, lng });
+      if (!name) return;
+      onTogglePlace(name, name, adcode, 'province', lat, lng);
     },
     [onTogglePlace]
   );
@@ -203,21 +200,16 @@ export default function ChinaMap({
   if (loading) {
     return (
       <div
+        ref={containerRef}
         className={`flex items-center justify-center ${className}`}
         style={{ background: c.ocean }}
       >
         <div className="flex flex-col items-center gap-3">
           <div
             className="w-8 h-8 border-2 rounded-full animate-spin"
-            style={{
-              borderColor: isDark ? '#333' : '#ddd',
-              borderTopColor: isDark ? '#888' : '#555',
-            }}
+            style={{ borderColor: isDark ? '#333' : '#ddd', borderTopColor: isDark ? '#888' : '#555' }}
           />
-          <span
-            className="text-xs font-mono uppercase tracking-widest"
-            style={{ color: c.title }}
-          >
+          <span className="text-xs font-mono uppercase tracking-widest" style={{ color: c.title }}>
             Loading Map...
           </span>
         </div>
@@ -230,6 +222,7 @@ export default function ChinaMap({
   if (error || !geoFeatures || !pathGen || !provincePaths) {
     return (
       <div
+        ref={containerRef}
         className={`flex items-center justify-center ${className}`}
         style={{ background: c.ocean }}
       >
@@ -245,6 +238,7 @@ export default function ChinaMap({
 
   return (
     <div
+      ref={containerRef}
       className={`relative select-none ${className}`}
       style={{ background: c.ocean, overflow: 'hidden' }}
       onMouseMove={handleMouseMove}
@@ -271,10 +265,7 @@ export default function ChinaMap({
                 ? `drop-shadow(0 0 3px ${c.visitedGlow})`
                 : undefined,
             }}
-            onClick={(e) => {
-              const f = geoFeatures.find((gf) => gf.properties.adcode === province.adcode);
-              if (f) handleProvinceClick(e, f);
-            }}
+            onClick={(e) => handleProvinceClick(e, province.props)}
             onMouseEnter={() => setHoveredAdcode(province.adcode)}
             onMouseLeave={() => setHoveredAdcode(null)}
           />
@@ -286,10 +277,7 @@ export default function ChinaMap({
         className="absolute top-4 left-4 pointer-events-none"
         style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' }}
       >
-        <div
-          className="text-[10px] font-semibold uppercase"
-          style={{ color: c.title, letterSpacing: '0.25em', opacity: 0.6 }}
-        >
+        <div className="text-[10px] font-semibold uppercase" style={{ color: c.title, letterSpacing: '0.25em', opacity: 0.6 }}>
           China Map
         </div>
       </div>

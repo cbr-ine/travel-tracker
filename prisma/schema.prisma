@@ -24,4 +24,6 @@ model VisitedPlace {
   lng       Float    @default(0)
   level     String   @default("city") // "province" or "city"
   visitedAt DateTime @default(now())
+
+  @@unique([name, province])
 }

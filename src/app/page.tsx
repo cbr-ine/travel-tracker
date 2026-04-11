@@ -108,6 +108,7 @@ export default function Home() {
   const handleTogglePlace = useCallback(
     async (name: string, province: string, adcode: string, level: string, lat: number, lng: number) => {
       const isVisited = useTravelStore.getState().isPlaceVisited(name, province);
+      console.log('[handleTogglePlace]', { name, province, adcode, level, lat, lng, isVisited });
       if (isVisited) {
         // Find and remove
         const place = places.find((p) => p.name === name && p.province === province);
@@ -124,11 +125,14 @@ export default function Home() {
         }
       } else {
         // Add
+        const payload = { name, province, adcode, lat, lng, level };
+        console.log('[handleTogglePlace] POST body:', JSON.stringify(payload));
         const res = await fetch('/api/places', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, province, adcode, lat, lng, level }),
+          body: JSON.stringify(payload),
         });
+        console.log('[handleTogglePlace] response:', res.status);
         if (res.ok) {
           const data = await res.json();
           addPlace(data);

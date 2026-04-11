@@ -847,3 +847,30 @@ Stage Summary:
 - Refactored files: src/components/map/ChinaMap.tsx (complete rewrite), src/components/map/WorldMap.tsx (clipExtent fix)
 - Key fix: explicit clipExtent + stable ResizeObserver target + null-size guard
 - China map should now render correctly on all screen sizes
+
+---
+Task ID: 18
+Agent: Main Agent
+Task: Full codebase audit and bug fixes for China map feature
+
+Work Log:
+- Dev log analysis: found `POST /api/places 400` errors when clicking provinces
+- API direct test: curl with correct params returns 201 (API itself works)
+- Ran comprehensive Explore audit of entire codebase, found 14 issues
+- Fixed Bug #1 (HIGH): ChinaMap used `window.innerWidth/Height - 64` for sizing → replaced with containerRef + ResizeObserver (same pattern as WorldMap). Root cause of gray panel - when container dimensions didn't match window dimensions, SVG paths rendered outside visible area.
+- Fixed Bug #2 (MED): Province click passed raw GeoJSON feature object instead of just properties → refactored to pass `props` directly with defensive type coercion (`String(props.name || '')`)
+- Fixed Bug #3 (MED): No DB-level unique constraint on `(name, province)` → added `@@unique([name, province])` to VisitedPlace model in prisma/schema.prisma, ran `db:push`
+- Fixed Bug #4 (MED): countries POST had no try/catch on `request.json()` → added try/catch returning 400
+- Fixed Bug #5 (LOW-MED): Both API routes lacked try/catch on `db.create()` → wrapped in try/catch with 500 response
+- Removed "年度探索分布" from StatisticsPanel
+- Removed unused `Button`, `TrendingUp`, `X` imports from StatisticsPanel
+- Added server-side logging to POST /api/places to capture request body
+- Added client-side logging to ChinaMap click handler and page.tsx handleTogglePlace
+- End-to-end API test: POST 201, duplicate 409, GET 200, DELETE 200 — all working
+
+Stage Summary:
+- 5 files modified: ChinaMap.tsx (complete rewrite), StatisticsPanel.tsx, places/route.ts, countries/route.ts, schema.prisma
+- Key fix: containerRef + ResizeObserver for proper sizing
+- All API routes now have robust error handling (try/catch on json parsing + db operations)
+- Database has unique constraint preventing duplicate places
+- Server + client logging added for debugging
