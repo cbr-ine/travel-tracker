@@ -108,8 +108,15 @@ export default function ChinaMap({
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
         if (cancelled) return;
-        const features = (data.features || []) as GeoFeature[];
-        console.log('[ChinaMap] loaded', features.length, 'features');
+
+        // Filter out features with empty names (e.g. 九段线 100000_JD)
+        const features = (data.features || [])
+          .filter((f: any) => {
+            const name = String(f?.properties?.name || '').trim();
+            return name.length > 0;
+          }) as GeoFeature[];
+
+        console.log('[ChinaMap] loaded', features.length, 'valid features');
         setGeoFeatures(features);
         setError(null);
       } catch (err) {
@@ -125,7 +132,7 @@ export default function ChinaMap({
     return () => { cancelled = true; };
   }, []);
 
-  // ResizeObserver on container (same pattern as WorldMap)
+  // ResizeObserver on container
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -159,9 +166,10 @@ export default function ChinaMap({
     if (!geoFeatures || !pathGen) return null;
     return geoFeatures.map((f) => {
       const props = f.properties;
-      const adcode = Number(props.adcode) || 0;
-      const name = String(props.name || '');
-      const isVisited = visitedSet.has(name) || visitedSet.has(String(adcode));
+      const rawAdcode = props.adcode;
+      const adcode = Number(rawAdcode) || 0;
+      const name = String(props.name || '').trim();
+      const isVisited = visitedSet.has(name) || visitedSet.has(String(rawAdcode));
       const isHovered = hoveredAdcode === adcode;
       let fill: string;
       if (isVisited) {
@@ -248,11 +256,12 @@ export default function ChinaMap({
         width={dimensions.width}
         height={dimensions.height}
         viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
+        className="w-full h-full"
         style={{ display: 'block' }}
       >
-        {provincePaths.map((province) => (
+        {provincePaths.map((province, idx) => (
           <path
-            key={province.adcode}
+            key={province.adcode || `province-${idx}`}
             d={province.d}
             fill={province.fill}
             stroke={province.isVisited ? c.visitedHover : c.border}
@@ -260,13 +269,15 @@ export default function ChinaMap({
             strokeLinejoin="round"
             style={{
               transition: 'fill 0.15s ease',
-              cursor: 'pointer',
+              cursor: province.name ? 'pointer' : 'default',
               filter: province.isVisited
                 ? `drop-shadow(0 0 3px ${c.visitedGlow})`
                 : undefined,
             }}
-            onClick={(e) => handleProvinceClick(e, province.props)}
-            onMouseEnter={() => setHoveredAdcode(province.adcode)}
+            onClick={(e) => {
+              if (province.name) handleProvinceClick(e, province.props);
+            }}
+            onMouseEnter={() => province.name && setHoveredAdcode(province.adcode)}
             onMouseLeave={() => setHoveredAdcode(null)}
           />
         ))}
@@ -287,13 +298,13 @@ export default function ChinaMap({
         className="absolute top-4 right-4 pointer-events-none px-3 py-1.5 rounded-full text-xs font-mono font-medium"
         style={{ background: c.badge, color: c.badgeText, backdropFilter: 'blur(8px)' }}
       >
-        {provinceCount}/34 省份
+        {provinceCount}/{geoFeatures.length} 省份
       </div>
 
       {/* Tooltip */}
       {hoveredAdcode !== null && (() => {
         const p = provincePaths.find((pp) => pp.adcode === hoveredAdcode);
-        if (!p) return null;
+        if (!p || !p.name) return null;
         return (
           <div
             className="fixed pointer-events-none z-50 px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap"

@@ -874,3 +874,32 @@ Stage Summary:
 - All API routes now have robust error handling (try/catch on json parsing + db operations)
 - Database has unique constraint preventing duplicate places
 - Server + client logging added for debugging
+
+---
+Task ID: bugfix-1
+Agent: Main Agent
+Task: Comprehensive bug check and fix for China Map component
+
+Work Log:
+- Read all relevant source files: ChinaMap.tsx, page.tsx, WorldMap.tsx, china-geojson API route, visitStore, StatisticsPanel
+- Analyzed dev.log: found 3x POST /api/places 400 errors (lines 81-83) from older code, followed by successful 201/409/200 after fixes
+- Verified GeoJSON data structure: DataV API returns 35 features, including 九段线 (100000_JD) with empty name
+- Confirmed DataV _full version includes `center` property with correct [lng, lat] coordinates
+- Found bug: 35th feature (九段线) has empty `name` causing non-interactive gray area on map
+- Found improvement: province badge was hardcoded "34" instead of using actual feature count
+
+Fixes Applied:
+1. Filter out features with empty names during GeoJSON fetch (prevents 九段线 rendering as non-interactive path)
+2. Province badge now uses `geoFeatures.length` (dynamic) instead of hardcoded 34
+3. Added `className="w-full h-full"` to SVG for responsive sizing (matching WorldMap pattern)
+4. Added defensive checks: click/hover/cursor only active when `province.name` exists
+5. Tooltip now guards against empty names: `if (!p || !p.name) return null`
+6. Path key fallback: `key={province.adcode || \`province-${idx}\`}` prevents key collision
+7. Used `rawAdcode` for visitedSet lookup to avoid type coercion issues
+
+Stage Summary:
+- 1 file modified: src/components/map/ChinaMap.tsx
+- China map now correctly filters out 九段线 (35 → 34 valid provinces)
+- All province interactions (click, hover, tooltip) properly guarded
+- Dev server compiles cleanly, zero lint errors in app code
+- All API routes return 200 consistently
