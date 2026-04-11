@@ -331,6 +331,8 @@ export default function ChinaMap({
   // ─── Province click handler ───
   const handleFeatureClick = useCallback((feature: GeoFeature) => {
     const { name, adcode } = feature.properties;
+    // Skip features without a valid name
+    if (!name || !adcode) return;
     let lat = 0;
     let lng = 0;
     try {

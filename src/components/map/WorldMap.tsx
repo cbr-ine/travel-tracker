@@ -500,9 +500,9 @@ export default function WorldMap({
           transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}
           style={{ transformOrigin: '0 0' }}
         >
-          {countryPaths?.map((country) => (
+          {countryPaths?.map((country, idx) => (
             <path
-              key={country.numericId}
+              key={country.numericId || `country-${idx}`}
               d={country.d}
               fill={country.fill}
               stroke={c.border}

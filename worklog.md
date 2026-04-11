@@ -761,3 +761,17 @@ Stage Summary:
 - China map CORS issue resolved via server-side proxy API
 - Lighting up (点亮) feature confirmed working for both World Map and China Map
 - Chinese country names now properly saved and displayed (toast + statistics)
+---
+Task ID: 17
+Agent: Main Agent
+Task: Fix 3 runtime bugs and preview panel CORS issue
+
+Work Log:
+- **Bug 1: China map "缺少必要参数"** — Some GeoJSON features may have empty/undefined `name` or `adcode`, causing POST /api/places to return 400. Added validation in ChinaMap.tsx `handleFeatureClick` to skip features without valid name or adcode.
+- **Bug 2: React key warning in WorldMap.tsx** — Some TopoJSON features have undefined IDs, causing `key={undefined}` duplicates. Added index-based fallback: `key={country.numericId || \`country-${idx}\`}`.
+- **Bug 3: getRGB TypeError** — `<color attach="fog" args={[bgColor]} />` in GlobeScene.tsx set `scene.fog` to a `THREE.Color` instead of a `THREE.Fog` object. When Three.js renderer later calls `scene.fog.color.getRGB()`, `scene.fog.color` is `undefined`. Fixed by replacing with proper `<fog attach="fog" args={[bgColor, 8, 20]} />`.
+- **Fix 4: Preview panel CORS** — Added `allowedDevOrigins: ["*.space.z.ai"]` to next.config.ts to allow the preview panel to access `/_next/*` resources cross-origin.
+
+Stage Summary:
+- 4 files modified: ChinaMap.tsx, WorldMap.tsx, GlobeScene.tsx, next.config.ts
+- All 3 runtime bugs fixed, dev server stable with all routes returning 200

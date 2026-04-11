@@ -50,7 +50,7 @@ export default function GlobeScene({
       }}
     >
       <color attach="background" args={[bgColor]} />
-      <color attach="fog" args={[bgColor]} />
+      <fog attach="fog" args={[bgColor, 8, 20]} />
       <ambientLight intensity={1} />
 
       <Suspense fallback={<GlobeLoadingFallback />}>
