@@ -903,3 +903,27 @@ Stage Summary:
 - All province interactions (click, hover, tooltip) properly guarded
 - Dev server compiles cleanly, zero lint errors in app code
 - All API routes return 200 consistently
+
+---
+Task ID: bugfix-2
+Agent: Main Agent
+Task: Fix ChinaMap showing Macau fullscreen — projection/zoom bug
+
+Work Log:
+- Diagnosed that user sees "全屏都是澳门" (Macau filling entire screen)
+- Root cause 1: containerRef was placed on DIFFERENT DOM nodes in loading state vs map state. When component transitions from loading→map, ResizeObserver still watches the old (unmounted) loading div. New map div is NEVER observed, so dimensions freeze at whatever the loading div measured.
+- Root cause 2: SVG had both explicit width/height attributes AND className="w-full h-full" CSS, causing potential rendering conflicts between intrinsic size and CSS override
+- Root cause 3: fitSize had zero padding, provinces touching SVG edges
+
+Fixes Applied:
+1. **Restructured component**: containerRef now ALWAYS stays on the outer wrapper div. Loading and error states render as absolute overlays INSIDE the same container. Map SVG renders alongside overlays. This ensures ResizeObserver observes the same DOM element throughout the component lifecycle.
+2. **Removed className="w-full h-full" from SVG**: SVG now only uses explicit width/height attributes matching measured dimensions. No CSS override conflict.
+3. **Replaced fitSize with fitExtent**: Added 2% padding on each side so provinces don't touch SVG edges. More predictable behavior.
+4. **Added debug dimension display**: Small text at bottom-left shows current dimensions for troubleshooting.
+
+Stage Summary:
+- 1 file modified: src/components/map/ChinaMap.tsx (full rewrite v3)
+- Key architectural change: containerRef never switches between states
+- Projection uses fitExtent with padding instead of fitSize
+- SVG sizing uses only explicit attributes (no CSS conflicts)
+- Compiled cleanly (191ms), zero errors
