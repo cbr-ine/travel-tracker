@@ -797,3 +797,25 @@ Stage Summary:
 - Key fix: `fitExtent()` replaces manual bounds math — properly handles clip extent
 - Zero new lint errors in app code
 - Dev server compiles cleanly, all routes return 200
+
+---
+Task ID: 19
+Agent: Main Agent
+Task: Fix China map showing gray panel instead of map
+
+Work Log:
+- Diagnosed root cause: React's `onWheel` synthetic event is registered as passive by default in React 17+. Calling `e.preventDefault()` on a passive listener throws an unhandled error, crashing the ChinaMap component. This leaves only the gray background div visible.
+- The WorldMap component worked correctly because it uses native `addEventListener` with `{ passive: false }` — the proper pattern for preventing default scroll behavior.
+- Completely rewrote ChinaMap.tsx modeled after the working WorldMap pattern:
+  - Replaced React `onWheel` handler with `useEffect` + native `svg.addEventListener('wheel', handler, { passive: false })`
+  - Used `geoMercator().fitExtent()` for robust projection (with fallback)
+  - Simplified the component to ~280 lines (from ~495)
+  - Removed the separate SouthChinaSeaInset sub-component (simplification)
+  - Consistent zoom/pan pattern matching WorldMap (cursor-based zoom, state-based pan)
+  - Consistent color system matching WorldMap (COLORS object with light/dark)
+  - Consistent tooltip pattern matching WorldMap (badge-style, dark/light theme)
+
+Stage Summary:
+- File: src/components/map/ChinaMap.tsx (complete rewrite)
+- Key fix: native addEventListener with { passive: false } for wheel zoom
+- Dev log clean, no errors, all routes 200

@@ -1,6 +1,13 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useRef,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  type MouseEvent as ReactMouseEvent,
+} from 'react';
 import { geoMercator, geoPath, geoCentroid } from 'd3-geo';
 
 // ─── Types ───
@@ -19,10 +26,6 @@ interface ChinaMapProps {
   className?: string;
 }
 
-// GeoJSON types — loosely typed to match actual DataV API response
-type GeoFeature = any;
-type GeoFeatureCollection = any;
-
 // ─── Province abbreviation mapping ───
 
 const PROVINCE_ABBR: Record<string, string> = {
@@ -39,20 +42,44 @@ const PROVINCE_ABBR: Record<string, string> = {
 
 // ─── Constants ───
 
-const MIN_ZOOM = 0.8;
-const MAX_ZOOM = 10;
 const PADDING = 30;
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 8;
 
-// South China Sea adcodes (rendered in inset)
-const SCSEA_PROVINCES = ['460000', '710000', '810000', '820000'];
+// ─── Colors ───
 
-// ─── Fetch helper ───
-
-async function fetchGeoJSON(url: string): Promise<GeoFeatureCollection> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to fetch GeoJSON: ${res.status}`);
-  return res.json();
-}
+const COLORS = {
+  light: {
+    ocean: '#fafafa',
+    unvisited: '#e5e7eb',
+    unvisitedHover: '#d1d5db',
+    border: '#d1d5db',
+    visited: 'rgba(251, 191, 36, 0.65)',
+    visitedHover: 'rgba(251, 191, 36, 0.85)',
+    visitedGlow: 'rgba(251, 191, 36, 0.3)',
+    title: '#a0a0a0',
+    badge: 'rgba(23, 23, 23, 0.75)',
+    badgeText: '#fafafa',
+    tooltip: 'rgba(23, 23, 23, 0.85)',
+    tooltipText: '#fafafa',
+    abbr: '#666',
+  },
+  dark: {
+    ocean: '#0a0a0a',
+    unvisited: '#262626',
+    unvisitedHover: '#333333',
+    border: '#404040',
+    visited: 'rgba(251, 191, 36, 0.55)',
+    visitedHover: 'rgba(251, 191, 36, 0.75)',
+    visitedGlow: 'rgba(251, 191, 36, 0.2)',
+    title: '#555555',
+    badge: 'rgba(250, 250, 250, 0.85)',
+    badgeText: '#171717',
+    tooltip: 'rgba(250, 250, 250, 0.9)',
+    tooltipText: '#171717',
+    abbr: '#999',
+  },
+};
 
 // ─── Main Component ───
 
@@ -62,64 +89,67 @@ export default function ChinaMap({
   isDark = false,
   className = '',
 }: ChinaMapProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Map state
-  const [geoData, setGeoData] = useState<GeoFeatureCollection | null>(null);
+  // Data state
+  const [geoFeatures, setGeoFeatures] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [hoveredAdcode, setHoveredAdcode] = useState<string | null>(null);
-  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number; name: string; visited: boolean } | null>(null);
 
-  // Zoom/Pan state
+  // Interaction state
+  const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
-  const lastMousePos = useRef({ x: 0, y: 0 });
-  const zoomRef = useRef(zoom);
-  const panRef = useRef(pan);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+  const [panOrigin, setPanOrigin] = useState({ x: 0, y: 0 });
+  const [hoveredAdcode, setHoveredAdcode] = useState<string | null>(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
-  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
-  useEffect(() => { panRef.current = pan; }, [pan]);
+  // Colors
+  const c = isDark ? COLORS.dark : COLORS.light;
 
-  // Visited province set for quick lookup
+  // Visited set for fast lookup
   const visitedSet = useMemo(() => {
     const set = new Set<string>();
-    for (const p of visitedPlaces) {
+    visitedPlaces.forEach((p) => {
       set.add(p.name);
       set.add(String(p.adcode));
-    }
+    });
     return set;
   }, [visitedPlaces]);
 
-  const visitedCount = useMemo(() => {
-    return new Set(visitedPlaces.filter((p) => p.level === 'province').map((p) => p.adcode)).size;
-  }, [visitedPlaces]);
+  const visitedCount = useMemo(
+    () => new Set(visitedPlaces.filter((p) => p.level === 'province').map((p) => p.adcode)).size,
+    [visitedPlaces]
+  );
 
-  // SVG dimensions
-  const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
-
-  // Fetch China GeoJSON
+  // Fetch GeoJSON
   useEffect(() => {
     let cancelled = false;
-    async function load() {
-      setLoading(true);
-      setError(null);
+    async function fetchData() {
       try {
-        const data = await fetchGeoJSON('/api/china-geojson');
-        if (!cancelled) {
-          setGeoData(data);
-          setLoading(false);
-        }
+        setLoading(true);
+        const response = await fetch('/api/china-geojson');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+
+        if (cancelled) return;
+
+        const features = data.features || [];
+        setGeoFeatures(features);
+        setError(null);
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Failed to load map data');
-          setLoading(false);
+          console.error('Failed to load China map:', err);
         }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     }
-    load();
+    fetchData();
     return () => { cancelled = true; };
   }, []);
 
@@ -127,368 +157,323 @@ export default function ChinaMap({
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        if (width > 0 && height > 0) {
-          setDimensions({ width: Math.floor(width), height: Math.floor(height) });
-        }
-      }
-    });
+    const updateSize = () => {
+      const rect = container.getBoundingClientRect();
+      setDimensions({ width: rect.width, height: rect.height });
+    };
+    updateSize();
+    const observer = new ResizeObserver(updateSize);
     observer.observe(container);
     return () => observer.disconnect();
   }, []);
 
-  // D3 projection — use fitSize for robust sizing
-  const projection = useMemo(() => {
-    if (!geoData || !geoData.features || geoData.features.length === 0) return null;
+  // Projection & path generator — use fitSize like WorldMap
+  const projectionPath = useMemo(() => {
+    if (!geoFeatures || geoFeatures.length === 0) return null;
 
     try {
-      const proj = geoMercator().fitExtent(
-        [[PADDING, PADDING], [dimensions.width - PADDING, dimensions.height - PADDING]],
-        geoData
-      );
-      return proj;
+      const featureCollection = { type: 'FeatureCollection' as const, features: geoFeatures };
+      const projection = geoMercator()
+        .fitExtent(
+          [[PADDING, PADDING], [dimensions.width - PADDING, dimensions.height - PADDING]],
+          featureCollection as unknown as GeoJSON.FeatureCollection
+        );
+      const pathGen = geoPath(projection) as (obj: any) => string | null;
+      return { projection, pathGen };
     } catch {
-      // Fallback: manual center
-      return geoMercator()
+      // Fallback
+      const projection = geoMercator()
         .center([104, 35])
-        .scale(Math.min(dimensions.width, dimensions.height) / 4)
+        .scale(Math.min(dimensions.width, dimensions.height) / 3)
         .translate([dimensions.width / 2, dimensions.height / 2]);
+      const pathGen = geoPath(projection) as (obj: any) => string | null;
+      return { projection, pathGen };
     }
-  }, [geoData, dimensions]);
+  }, [geoFeatures, dimensions]);
 
-  const pathGenerator = useMemo(() => {
-    if (!projection) return null;
-    return geoPath(projection) as (obj: GeoFeature) => string | null;
-  }, [projection]);
+  // ─── Zoom handler (native addEventListener to support preventDefault) ───
 
-  // Pre-compute paths for mainland features
-  const mainlandPaths = useMemo(() => {
-    if (!geoData || !pathGenerator) return [];
+  const handleWheel = useCallback(
+    (e: WheelEvent) => {
+      e.preventDefault();
+      const svg = svgRef.current;
+      if (!svg) return;
 
-    return geoData.features
-      .filter((f: GeoFeature) => !SCSEA_PROVINCES.includes(String(f.properties?.adcode)))
-      .map((f: GeoFeature) => {
-        try {
-          const d = pathGenerator(f);
-          if (!d) return null;
-          return {
-            feature: f,
-            d,
-            adcode: String(f.properties?.adcode ?? ''),
-            name: String(f.properties?.name ?? ''),
-          };
-        } catch {
-          return null;
-        }
-      })
-      .filter(Boolean);
-  }, [geoData, pathGenerator]);
+      const rect = svg.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
 
-  // Pre-compute centroid map for labels
-  const centroidMap = useMemo(() => {
-    if (!projection || !pathGenerator || !geoData) return new Map<string, [number, number]>();
-    const map = new Map<string, [number, number]>();
-    for (const f of geoData.features) {
+      const zoomFactor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+      const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom * zoomFactor));
+
+      const scale = newZoom / zoom;
+      const newPanX = mouseX - (mouseX - pan.x) * scale;
+      const newPanY = mouseY - (mouseY - pan.y) * scale;
+
+      setZoom(newZoom);
+      setPan({ x: newPanX, y: newPanY });
+    },
+    [zoom, pan]
+  );
+
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    svg.addEventListener('wheel', handleWheel, { passive: false });
+    return () => svg.removeEventListener('wheel', handleWheel);
+  }, [handleWheel]);
+
+  // ─── Pan handlers ───
+
+  const handleMouseDown = useCallback(
+    (e: ReactMouseEvent) => {
+      if ((e.target as Element).tagName === 'path') return;
+      setIsPanning(true);
+      setPanStart({ x: e.clientX, y: e.clientY });
+      setPanOrigin({ x: pan.x, y: pan.y });
+    },
+    [pan]
+  );
+
+  const handleMouseMove = useCallback(
+    (e: ReactMouseEvent) => {
+      const container = containerRef.current;
+      if (container) {
+        const rect = container.getBoundingClientRect();
+        setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+      }
+      if (!isPanning) return;
+      const dx = e.clientX - panStart.x;
+      const dy = e.clientY - panStart.y;
+      setPan({ x: panOrigin.x + dx, y: panOrigin.y + dy });
+    },
+    [isPanning, panStart, panOrigin]
+  );
+
+  const handleMouseUp = useCallback(() => { setIsPanning(false); }, []);
+
+  const handleDoubleClick = useCallback(
+    (e: ReactMouseEvent) => {
+      const svg = svgRef.current;
+      if (!svg) return;
+      const rect = svg.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      const newZoom = Math.min(MAX_ZOOM, zoom * 1.5);
+      const scale = newZoom / zoom;
+      setZoom(newZoom);
+      setPan({ x: mouseX - (mouseX - pan.x) * scale, y: mouseY - (mouseY - pan.y) * scale });
+    },
+    [zoom, pan]
+  );
+
+  // ─── Province click ───
+
+  const handleProvinceClick = useCallback(
+    (e: ReactMouseEvent, clickedFeature: any) => {
+      e.stopPropagation();
+      const name = clickedFeature.properties?.name || '';
+      const adcode = String(clickedFeature.properties?.adcode ?? '');
+      if (!name || !adcode) return;
+      let lat = 0;
+      let lng = 0;
       try {
-        const c = pathGenerator.centroid(f);
+        const centroid = geoCentroid(clickedFeature);
+        lat = centroid[1];
+        lng = centroid[0];
+      } catch { /* fallback */ }
+      onTogglePlace(name, name, adcode, 'province', lat, lng);
+    },
+    [onTogglePlace]
+  );
+
+  // ─── Pre-compute rendered paths ───
+
+  const renderedPaths = useMemo(() => {
+    if (!geoFeatures || !projectionPath) return null;
+
+    return geoFeatures.map((f) => {
+      const adcode = String(f.properties?.adcode ?? '');
+      const name = String(f.properties?.name ?? '');
+      const isVisited = visitedSet.has(name) || visitedSet.has(adcode);
+      const isHovered = hoveredAdcode === adcode;
+
+      let d: string;
+      try {
+        d = projectionPath.pathGen(f) || '';
+        if (!d) return null;
+      } catch {
+        return null;
+      }
+
+      return { feature: f, d, adcode, name, isVisited, isHovered };
+    }).filter(Boolean);
+  }, [geoFeatures, projectionPath, visitedSet, hoveredAdcode]);
+
+  // ─── Centroid map for labels ───
+
+  const centroidMap = useMemo(() => {
+    if (!projectionPath) return new Map<string, [number, number]>();
+    const map = new Map<string, [number, number]>();
+    if (!geoFeatures) return map;
+    for (const f of geoFeatures) {
+      try {
+        const c = projectionPath.pathGen.centroid(f);
         if (isFinite(c[0]) && isFinite(c[1])) {
           map.set(String(f.properties?.adcode), c);
         }
       } catch { /* skip */ }
     }
     return map;
-  }, [geoData, pathGenerator, projection]);
+  }, [geoFeatures, projectionPath]);
 
-  // ─── Zoom handlers ───
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    const delta = -e.deltaY * 0.001 * zoomRef.current;
-    const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomRef.current * (1 + delta)));
-    const svg = svgRef.current;
-    if (!svg) { setZoom(newZoom); return; }
-    const rect = svg.getBoundingClientRect();
-    const mx = e.clientX - rect.left - dimensions.width / 2;
-    const my = e.clientY - rect.top - dimensions.height / 2;
-    const factor = newZoom / zoomRef.current;
-    const newPanX = mx - factor * (mx - panRef.current.x);
-    const newPanY = my - factor * (my - panRef.current.y);
-    setZoom(newZoom);
-    setPan({ x: newPanX, y: newPanY });
-  }, [dimensions]);
+  // ─── Loading state ───
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button !== 0) return;
-    setIsPanning(true);
-    lastMousePos.current = { x: e.clientX, y: e.clientY };
-  }, []);
+  if (loading) {
+    return (
+      <div ref={containerRef} className={`flex items-center justify-center ${className}`} style={{ background: c.ocean }}>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: isDark ? '#333' : '#ddd', borderTopColor: isDark ? '#888' : '#555' }} />
+          <span className="text-xs font-mono uppercase tracking-widest" style={{ color: c.title }}>Loading Map...</span>
+        </div>
+      </div>
+    );
+  }
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (hoveredAdcode && svgRef.current) {
-      const rect = svgRef.current.getBoundingClientRect();
-      setTooltipPos({
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-        name: '',
-        visited: false,
-      });
-    }
-    if (!isPanning) return;
-    const dx = e.clientX - lastMousePos.current.x;
-    const dy = e.clientY - lastMousePos.current.y;
-    lastMousePos.current = { x: e.clientX, y: e.clientY };
-    setPan((prev) => ({ x: prev.x + dx, y: prev.y + dy }));
-  }, [hoveredAdcode, isPanning]);
+  // ─── Error state ───
 
-  const handleMouseUp = useCallback(() => { setIsPanning(false); }, []);
+  if (error || !geoFeatures || !projectionPath) {
+    return (
+      <div ref={containerRef} className={`flex items-center justify-center ${className}`} style={{ background: c.ocean }}>
+        <div className="flex flex-col items-center gap-2">
+          <span className="text-sm" style={{ color: c.title }}>Failed to load map</span>
+          <span className="text-xs" style={{ color: c.title }}>{error || 'No data'}</span>
+        </div>
+      </div>
+    );
+  }
 
-  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const rect = svg.getBoundingClientRect();
-    const mx = e.clientX - rect.left - dimensions.width / 2;
-    const my = e.clientY - rect.top - dimensions.height / 2;
-    const newZoom = Math.min(MAX_ZOOM, zoomRef.current * 1.5);
-    const factor = newZoom / zoomRef.current;
-    setZoom(newZoom);
-    setPan({ x: mx - factor * (mx - panRef.current.x), y: my - factor * (my - panRef.current.y) });
-  }, [dimensions]);
+  // ─── Map render ───
 
-  const handleResetView = useCallback(() => {
-    setZoom(1);
-    setPan({ x: 0, y: 0 });
-  }, []);
-
-  // ─── Province click handler ───
-  const handleFeatureClick = useCallback((feature: GeoFeature) => {
-    const name = feature.properties?.name;
-    const adcode = String(feature.properties?.adcode ?? '');
-    if (!name || !adcode) return;
-    let lat = 0;
-    let lng = 0;
-    try {
-      const centroid = geoCentroid(feature);
-      lat = centroid[1];
-      lng = centroid[0];
-    } catch { /* fallback */ }
-    onTogglePlace(name, name, adcode, 'province', lat, lng);
-  }, [onTogglePlace]);
-
-  // ─── Colors ───
-  const colors = useMemo(() => ({
-    bg: isDark ? '#0a0a0a' : '#fafafa',
-    unvisited: isDark ? '#262626' : '#e5e7eb',
-    border: isDark ? '#404040' : '#d1d5db',
-    visited: 'rgba(251, 191, 36, 0.65)',
-    visitedStroke: 'rgba(251, 191, 36, 0.9)',
-    hoverUnvisited: isDark ? '#333333' : '#d4d4d8',
-    hoverVisited: 'rgba(251, 191, 36, 0.8)',
-    subtitle: isDark ? '#555555' : '#a0a0a0',
-    abbr: isDark ? '#999' : '#666',
-  }), [isDark]);
-
-  // ─── Render ───
   return (
     <div
       ref={containerRef}
-      className={`relative w-full h-full overflow-hidden select-none ${className}`}
-      style={{ background: colors.bg, cursor: isPanning ? 'grabbing' : 'grab' }}
-      onWheel={handleWheel}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={() => { setIsPanning(false); setHoveredAdcode(null); setTooltipPos(null); }}
-      onDoubleClick={handleDoubleClick}
+      className={`relative select-none ${className}`}
+      style={{ background: c.ocean, overflow: 'hidden' }}
     >
-      {/* Loading */}
-      {loading && (
-        <div className="absolute inset-0 flex items-center justify-center z-10">
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-2 border-neutral-300 dark:border-neutral-600 border-t-amber-500 rounded-full animate-spin" />
-            <span className="text-xs text-neutral-400">加载地图数据...</span>
-          </div>
-        </div>
-      )}
-
-      {/* Error */}
-      {error && (
-        <div className="absolute inset-0 flex items-center justify-center z-10">
-          <div className="flex flex-col items-center gap-3 text-center px-6">
-            <span className="text-sm text-red-400">{error}</span>
-            <button
-              onClick={() => window.location.reload()}
-              className="text-xs px-3 py-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
-            >
-              重试
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* SVG Map */}
-      {!loading && !error && geoData && projection && pathGenerator && (
-        <svg
-          ref={svgRef}
-          width={dimensions.width}
-          height={dimensions.height}
-          viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
-          className="w-full h-full"
+      <svg
+        ref={svgRef}
+        width={dimensions.width}
+        height={dimensions.height}
+        viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
+        className="w-full h-full"
+        style={{ cursor: isPanning ? 'grabbing' : 'grab' }}
+        onDoubleClick={handleDoubleClick}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={() => { setIsPanning(false); setHoveredAdcode(null); }}
+      >
+        {/* Countries group with zoom/pan transform */}
+        <g
+          transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}
+          style={{ transformOrigin: '0 0' }}
         >
-          <defs>
-            <filter id="china-glow" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="3" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-
-          {/* Transform group for zoom/pan */}
-          <g
-            transform={`translate(${dimensions.width / 2 + pan.x}, ${dimensions.height / 2 + pan.y}) scale(${zoom}) translate(${-dimensions.width / 2}, ${-dimensions.height / 2})`}
-          >
-            {/* Mainland province paths */}
-            {mainlandPaths.map((item) => {
-              if (!item) return null;
-              const { feature, d, adcode, name } = item;
-              const isVisited = visitedSet.has(name) || visitedSet.has(adcode);
-              const isHovered = hoveredAdcode === adcode;
-
-              return (
-                <g key={adcode}>
-                  {isVisited && (
-                    <path
-                      d={d}
-                      fill="rgba(251, 191, 36, 0.25)"
-                      stroke="none"
-                      filter="url(#china-glow)"
-                    />
-                  )}
+          {renderedPaths?.map((item) => {
+            if (!item) return null;
+            const { feature, d, adcode, name, isVisited, isHovered } = item;
+            return (
+              <g key={adcode}>
+                {/* Glow behind visited */}
+                {isVisited && (
                   <path
                     d={d}
-                    fill={isHovered
-                      ? (isVisited ? colors.hoverVisited : colors.hoverUnvisited)
-                      : (isVisited ? colors.visited : colors.unvisited)
-                    }
-                    stroke={isVisited ? colors.visitedStroke : colors.border}
-                    strokeWidth={isHovered ? 1.2 : 0.6}
-                    strokeLinejoin="round"
-                    style={{ cursor: 'pointer', transition: 'fill 0.15s' }}
-                    onClick={() => handleFeatureClick(feature)}
-                    onMouseEnter={(e) => {
-                      setHoveredAdcode(adcode);
-                      const svg = svgRef.current;
-                      if (svg) {
-                        const rect = svg.getBoundingClientRect();
-                        setTooltipPos({
-                          x: e.clientX - rect.left,
-                          y: e.clientY - rect.top,
-                          name,
-                          visited: isVisited,
-                        });
-                      }
-                    }}
-                    onMouseLeave={() => {
-                      setHoveredAdcode(null);
-                      setTooltipPos(null);
-                    }}
+                    fill={c.visitedGlow}
+                    stroke="none"
+                    style={{ filter: `drop-shadow(0 0 ${4 / zoom}px ${c.visitedGlow})` }}
                   />
-                  {centroidMap.has(adcode) && (
-                    <text
-                      x={centroidMap.get(adcode)![0]}
-                      y={centroidMap.get(adcode)![1]}
-                      textAnchor="middle"
-                      dominantBaseline="central"
-                      fontSize={zoom > 3 ? 12 : zoom > 1.5 ? 10 : 9}
-                      fontWeight={600}
-                      fontFamily="system-ui, sans-serif"
-                      fill={isVisited ? '#92400e' : colors.abbr}
-                      opacity={zoom > 1.2 ? 1 : 0.7}
-                      style={{ pointerEvents: 'none', userSelect: 'none' }}
-                    >
-                      {PROVINCE_ABBR[name] || name.replace(/(省|市|自治区|特别行政区|壮族|回族|维吾尔)/g, '').slice(0, 1)}
-                    </text>
-                  )}
-                </g>
-              );
-            })}
-          </g>
-        </svg>
-      )}
+                )}
+                {/* Province path */}
+                <path
+                  d={d}
+                  fill={isHovered
+                    ? (isVisited ? c.visitedHover : c.unvisitedHover)
+                    : (isVisited ? c.visited : c.unvisited)
+                  }
+                  stroke={isVisited ? c.visitedHover : c.border}
+                  strokeWidth={0.5 / zoom}
+                  style={{
+                    transition: isVisited ? 'fill 0.2s ease, filter 0.2s ease' : 'fill 0.15s ease',
+                    cursor: 'pointer',
+                    filter: isVisited ? `drop-shadow(0 0 ${2 / zoom}px ${c.visitedGlow})` : undefined,
+                  }}
+                  onClick={(e) => handleProvinceClick(e, feature)}
+                  onMouseEnter={() => setHoveredAdcode(adcode)}
+                  onMouseLeave={() => setHoveredAdcode(null)}
+                />
+                {/* Province abbreviation label */}
+                {centroidMap.has(adcode) && zoom > 1.2 && (
+                  <text
+                    x={centroidMap.get(adcode)![0]}
+                    y={centroidMap.get(adcode)![1]}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fontSize={(zoom > 3 ? 12 : zoom > 2 ? 10 : 8) / zoom}
+                    fontWeight={600}
+                    fontFamily="system-ui, sans-serif"
+                    fill={isVisited ? '#92400e' : c.abbr}
+                    opacity={0.8}
+                    style={{ pointerEvents: 'none', userSelect: 'none' }}
+                  >
+                    {PROVINCE_ABBR[name] || name.replace(/(省|市|自治区|特别行政区|壮族|回族|维吾尔)/g, '').slice(0, 1)}
+                  </text>
+                )}
+              </g>
+            );
+          })}
+        </g>
+      </svg>
 
-      {/* Title */}
-      <div
-        className="absolute top-3 left-3 pointer-events-none select-none z-5"
-        style={{
-          fontFamily: 'var(--font-geist-mono), monospace',
-          fontSize: '11px',
-          fontWeight: 700,
-          letterSpacing: '0.15em',
-          textTransform: 'uppercase',
-          color: colors.subtitle,
-          opacity: 0.7,
-        }}
-      >
-        China Map
+      {/* CHINA MAP title */}
+      <div className="absolute top-4 left-4 pointer-events-none" style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' }}>
+        <div className="text-[10px] font-semibold uppercase" style={{ color: c.title, letterSpacing: '0.25em', opacity: 0.6 }}>
+          China Map
+        </div>
       </div>
 
-      {/* Province count */}
+      {/* Province count badge */}
       <div
-        className="absolute top-3 left-[110px] pointer-events-none select-none z-5"
-        style={{
-          fontFamily: 'var(--font-geist-mono), monospace',
-          fontSize: '11px',
-          fontWeight: 500,
-          color: colors.subtitle,
-          opacity: 0.7,
-        }}
+        className="absolute top-4 right-4 pointer-events-none px-3 py-1.5 rounded-full text-xs font-mono font-medium"
+        style={{ background: c.badge, color: c.badgeText, backdropFilter: 'blur(8px)' }}
       >
         {visitedCount}/34 省份
       </div>
 
-      {/* Reset view */}
-      {zoom !== 1 && (
-        <button
-          onClick={handleResetView}
-          className="absolute bottom-4 right-4 z-10 px-3 py-1.5 rounded-lg text-xs font-medium
-            bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm shadow-sm
-            border border-neutral-200 dark:border-neutral-700
-            text-neutral-600 dark:text-neutral-300
-            hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-        >
-          重置视图
-        </button>
-      )}
-
-      {/* Zoom indicator */}
-      <div
-        className="absolute bottom-4 left-4 z-10 px-2 py-1 rounded-md text-[10px] font-mono
-          bg-white/60 dark:bg-neutral-900/60 backdrop-blur-sm
-          text-neutral-400 dark:text-neutral-500 pointer-events-none"
-      >
-        {zoom.toFixed(1)}x
-      </div>
-
       {/* Tooltip */}
-      {tooltipPos && tooltipPos.name && (
-        <div
-          className="absolute z-20 pointer-events-none px-2.5 py-1.5 rounded-lg text-xs font-medium shadow-lg
-            bg-white/90 dark:bg-neutral-800/90 backdrop-blur-sm
-            border border-neutral-200 dark:border-neutral-700
-            text-neutral-800 dark:text-neutral-200"
-          style={{
-            left: tooltipPos.x + 12,
-            top: tooltipPos.y - 8,
-          }}
-        >
-          {tooltipPos.name}
-          {tooltipPos.visited && (
-            <span className="ml-1.5 text-amber-500">✓</span>
-          )}
-        </div>
-      )}
+      {hoveredAdcode && (() => {
+        const item = renderedPaths?.find((p) => p?.adcode === hoveredAdcode);
+        if (!item) return null;
+        return (
+          <div
+            className="absolute pointer-events-none z-50 px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap"
+            style={{
+              background: c.tooltip,
+              color: c.tooltipText,
+              left: mousePos.x + 14,
+              top: mousePos.y - 10,
+              transform: 'translateY(-100%)',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              backdropFilter: 'blur(8px)',
+            }}
+          >
+            {item.name}
+            {item.isVisited && (
+              <span className="ml-1.5 inline-block w-2 h-2 rounded-full" style={{ backgroundColor: '#fbbf24', verticalAlign: 'middle' }} />
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }
