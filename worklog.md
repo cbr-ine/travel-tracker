@@ -927,3 +927,32 @@ Stage Summary:
 - Projection uses fitExtent with padding instead of fitSize
 - SVG sizing uses only explicit attributes (no CSS conflicts)
 - Compiled cleanly (191ms), zero errors
+
+---
+Task ID: 1
+Agent: Main Agent
+Task: Fix ChinaMap showing only Macau (全屏都是澳门)
+
+Work Log:
+- Read all relevant files: ChinaMap.tsx, WorldMap.tsx, page.tsx, API route, package.json
+- Verified d3-geo package is installed (v3.1.1) with @types/d3-geo
+- Tested /api/china-geojson API — returns 35 features (34 provinces + 1 empty-name 九段线)
+- Data is correct — the issue is NOT in the API or data source
+- Diagnosed root cause: containerRef was moving between loading div → map div on state change, breaking ResizeObserver
+- Discovered dev server hot reload was broken (not picking up file changes) — this is why previous fixes had "no change"
+- Restarted dev server
+- Rewrote ChinaMap.tsx with:
+  1. Fixed wrapperRef on outer div (loading/error as absolute overlays, never conditional returns)
+  2. Removed SVG className="w-full h-full" (replaced with style={{ display: 'block' }})
+  3. Initial dimensions set to {0,0} — map only renders when dimensions > 50px
+  4. Added geoBounds debugging to verify raw bounding box
+  5. Added scale validation — if scale > 50000 or < 10, falls back to hardcoded China projection
+  6. Added try/catch around fitSize with hardcoded fallback
+  7. Used fitSize exactly like working WorldMap (same pattern, just geoMercator vs geoNaturalEarth1)
+  8. Added comprehensive console.log debugging throughout
+
+Stage Summary:
+- ChinaMap.tsx completely rewritten with stable containerRef and multiple fallback layers
+- Dev server restarted and confirmed working (compiles, page loads, APIs respond)
+- Key insight: previous fix attempts had "no change" because dev server hot reload was broken
+- API data verified correct (34 provinces with valid geometry)
