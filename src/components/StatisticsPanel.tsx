@@ -7,10 +7,7 @@ import {
   Navigation,
   MapPin,
   Calendar,
-  TrendingUp,
-  X,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -74,18 +71,6 @@ export default function StatisticsPanel({
     () => [...places].sort((a, b) => new Date(b.visitedAt).getTime() - new Date(a.visitedAt).getTime()).slice(0, 10),
     [places]
   );
-
-  // Year distribution for countries
-  const countryYearData = useMemo(() => {
-    const yearMap: Record<string, number> = {};
-    for (const c of countries) {
-      const year = new Date(c.visitedAt).getFullYear().toString();
-      yearMap[year] = (yearMap[year] || 0) + 1;
-    }
-    return Object.entries(yearMap)
-      .sort(([a], [b]) => b.localeCompare(a))
-      .map(([year, count]) => ({ year, count }));
-  }, [countries]);
 
   return (
     <div className={`w-full h-full overflow-hidden bg-white dark:bg-neutral-950 ${className}`}>
@@ -202,29 +187,6 @@ export default function StatisticsPanel({
                     <span className="text-sm text-neutral-700 dark:text-neutral-300">
                       {p.province ? `${p.province} · ` : ''}{p.name}
                     </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Year distribution */}
-          {countryYearData.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-1.5">
-                <TrendingUp className="h-3.5 w-3.5 text-neutral-400" />
-                <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                  年度探索分布
-                </span>
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                {countryYearData.map((item) => (
-                  <div
-                    key={item.year}
-                    className="px-3 py-1.5 bg-neutral-50 dark:bg-neutral-800 rounded-lg text-center"
-                  >
-                    <div className="text-base font-bold text-neutral-800 dark:text-neutral-200">{item.count}</div>
-                    <div className="text-[10px] text-neutral-400 font-mono">{item.year}</div>
                   </div>
                 ))}
               </div>
