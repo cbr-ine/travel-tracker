@@ -1,8 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Note: standalone output is incompatible with @netlify/plugin-nextjs.
-  // We use the default Next.js output so Netlify can serve API routes properly.
+  output: "standalone",
   allowedDevOrigins: ["*.space.z.ai"],
   typescript: {
     ignoreBuildErrors: true,
