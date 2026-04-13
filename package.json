@@ -88,6 +88,7 @@
     "zustand": "^5.0.6"
   },
   "devDependencies": {
+    "@netlify/plugin-nextjs": "^5.15.9",
     "@tailwindcss/postcss": "^4",
     "@types/react": "^19",
     "@types/react-dom": "^19",

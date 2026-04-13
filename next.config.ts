@@ -1,9 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  // Note: standalone output is incompatible with @netlify/plugin-nextjs.
+  // We use the default Next.js output so Netlify can serve API routes properly.
   allowedDevOrigins: ["*.space.z.ai"],
-  /* config options here */
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: [
           { key: "Access-Control-Allow-Origin", value: "*" },
-          { key: "Access-Control-Allow-Methods", value: "GET, OPTIONS" },
+          { key: "Access-Control-Allow-Methods", value: "GET, POST, DELETE, OPTIONS" },
           { key: "Access-Control-Allow-Headers", value: "*" },
         ],
       },
