@@ -7,6 +7,8 @@ export interface VisitedCountry {
   code: string;
   name: string;
   nameZh: string;
+  visitedDate: string;
+  note: string;
   visitedAt: string;
 }
 
@@ -18,10 +20,31 @@ export interface VisitedPlace {
   lat: number;
   lng: number;
   level: string;
+  visitedDate: string;
+  note: string;
   visitedAt: string;
 }
 
 export type AppView = 'globe' | 'world' | 'china' | 'stats';
+
+// ─── Pending visit info for dialog ───
+
+export type PendingVisit =
+  | {
+      type: 'country';
+      code: string;
+      name: string;
+      nameZh: string;
+    }
+  | {
+      type: 'place';
+      name: string;
+      province: string;
+      adcode: string;
+      level: string;
+      lat: number;
+      lng: number;
+    };
 
 // ─── State ───
 
@@ -33,7 +56,9 @@ interface TravelStoreState {
 
   // UI
   currentView: AppView;
-  statsPanelOpen: boolean;
+  sidebarOpen: boolean;
+  pendingVisit: PendingVisit | null;
+  dialogOpen: boolean;
 
   // Actions
   setCountries: (countries: VisitedCountry[]) => void;
@@ -44,7 +69,9 @@ interface TravelStoreState {
   removePlace: (id: string) => void;
   setCurrentView: (view: AppView) => void;
   setIsLoading: (loading: boolean) => void;
-  setStatsPanelOpen: (open: boolean) => void;
+  setSidebarOpen: (open: boolean) => void;
+  setPendingVisit: (visit: PendingVisit | null) => void;
+  setDialogOpen: (open: boolean) => void;
 
   // Helpers
   isCountryVisited: (code: string) => boolean;
@@ -56,7 +83,9 @@ export const useTravelStore = create<TravelStoreState>((set, get) => ({
   places: [],
   isLoading: false,
   currentView: 'globe',
-  statsPanelOpen: false,
+  sidebarOpen: false,
+  pendingVisit: null,
+  dialogOpen: false,
 
   setCountries: (countries) => set({ countries }),
   addCountry: (country) =>
@@ -74,7 +103,9 @@ export const useTravelStore = create<TravelStoreState>((set, get) => ({
     })),
   setCurrentView: (view) => set({ currentView: view }),
   setIsLoading: (loading) => set({ isLoading: loading }),
-  setStatsPanelOpen: (open) => set({ statsPanelOpen: open }),
+  setSidebarOpen: (open) => set({ sidebarOpen: open }),
+  setPendingVisit: (visit) => set({ pendingVisit: visit }),
+  setDialogOpen: (open) => set({ dialogOpen: open }),
 
   isCountryVisited: (code) =>
     get().countries.some((c) => c.code === code),

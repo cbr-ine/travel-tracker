@@ -11,6 +11,7 @@ import {
 import { feature } from 'topojson-client';
 import { geoNaturalEarth1, geoPath } from 'd3-geo';
 import type { Topology } from 'topojson-specification';
+import { Plus, Minus } from 'lucide-react';
 
 // ─── Types ───
 
@@ -340,6 +341,31 @@ export default function WorldMap({
     [zoom, pan]
   );
 
+  // ─── Zoom buttons ───
+
+  const zoomIn = useCallback(() => {
+    const newZoom = Math.min(MAX_ZOOM, zoom * 1.4);
+    const scale = newZoom / zoom;
+    const cx = dimensions.width / 2;
+    const cy = dimensions.height / 2;
+    setZoom(newZoom);
+    setPan({ x: cx - (cx - pan.x) * scale, y: cy - (cy - pan.y) * scale });
+  }, [zoom, pan, dimensions]);
+
+  const zoomOut = useCallback(() => {
+    const newZoom = Math.max(MIN_ZOOM, zoom / 1.4);
+    const scale = newZoom / zoom;
+    const cx = dimensions.width / 2;
+    const cy = dimensions.height / 2;
+    setZoom(newZoom);
+    setPan({ x: cx - (cx - pan.x) * scale, y: cy - (cy - pan.y) * scale });
+  }, [zoom, pan, dimensions]);
+
+  const resetZoom = useCallback(() => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }, []);
+
   // ─── Pan handlers ───
 
   const handleMouseDown = useCallback(
@@ -598,6 +624,30 @@ export default function WorldMap({
           })()}
         </div>
       )}
+
+      {/* Zoom controls */}
+      <div className="absolute bottom-20 right-4 z-20 flex flex-col gap-1">
+        {[
+          { icon: <Plus className="w-4 h-4" />, action: zoomIn },
+          { icon: <span className="text-[10px] font-mono">{Math.round(zoom * 100)}%</span>, action: resetZoom },
+          { icon: <Minus className="w-4 h-4" />, action: zoomOut },
+        ].map(({ icon, action }, i) => (
+          <button
+            key={i}
+            className="flex items-center justify-center w-9 h-9 rounded-lg transition-colors"
+            style={{
+              background: 'rgba(23,23,23,0.7)',
+              color: '#fafafa',
+              backdropFilter: 'blur(8px)',
+            }}
+            onClick={action}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(23,23,23,0.85)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(23,23,23,0.7)')}
+          >
+            {icon}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

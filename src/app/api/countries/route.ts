@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: '请求体格式错误' }, { status: 400 });
   }
 
-  const { code, name, nameZh } = body;
+  const { code, name, nameZh, visitedDate, note } = body;
 
   if (!code || !name) {
     return NextResponse.json({ error: '缺少必要参数' }, { status: 400 });
@@ -33,7 +33,13 @@ export async function POST(request: Request) {
 
   try {
     const country = await db.visitedCountry.create({
-      data: { code: String(code), name: String(name), nameZh: String(nameZh || '') },
+      data: {
+        code: String(code),
+        name: String(name),
+        nameZh: String(nameZh || ''),
+        visitedDate: String(visitedDate || ''),
+        note: String(note || ''),
+      },
     });
     return NextResponse.json(country, { status: 201 });
   } catch (err) {

@@ -1,18 +1,20 @@
 'use client';
 
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useTheme } from 'next-themes';
-import { Globe2, Map, Navigation, BarChart3, Sun, Moon } from 'lucide-react';
+import { Globe2, Map, Navigation, BarChart3, Sun, Moon, Menu } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { AppView, useTravelStore } from '@/lib/store';
+import { AppView, useTravelStore, type PendingVisit } from '@/lib/store';
 
 // ─── Lazy load heavy 3D components (SSR unsafe) ───
 const PixelGlobe = dynamic(() => import('@/components/globe/PixelGlobe'), { ssr: false });
 const WorldMap = dynamic(() => import('@/components/map/WorldMap'), { ssr: false });
 const ChinaMap = dynamic(() => import('@/components/map/ChinaMap'), { ssr: false });
 const StatisticsPanel = dynamic(() => import('@/components/StatisticsPanel'), { ssr: false });
+const VisitDialog = dynamic(() => import('@/components/VisitDialog'), { ssr: false });
+const RecordSidebar = dynamic(() => import('@/components/RecordSidebar'), { ssr: false });
 
 // ─── Main Page ───
 
@@ -32,8 +34,12 @@ export default function Home() {
     setPlaces,
     addPlace,
     removePlace,
-    statsPanelOpen,
-    setStatsPanelOpen,
+    sidebarOpen,
+    setSidebarOpen,
+    pendingVisit,
+    setPendingVisit,
+    dialogOpen,
+    setDialogOpen,
   } = useTravelStore();
 
   // ─── Fetch data on mount ───
@@ -68,71 +74,65 @@ export default function Home() {
     });
   }, [fetchCountries, fetchPlaces, setIsLoading]);
 
-  // ─── World map toggle ───
-  const handleToggleCountry = useCallback(
-    async (code: string, name: string, nameZh: string) => {
+  // ─── World map click handler ───
+  const handleCountryClick = useCallback(
+    (code: string, name: string, nameZh: string) => {
       const isVisited = useTravelStore.getState().isCountryVisited(code);
-      const displayName = nameZh || name;
       if (isVisited) {
-        // Remove
-        try {
-          const res = await fetch(`/api/countries/${code}`, { method: 'DELETE' });
-          if (res.ok) {
-            removeCountry(code);
-            toast.success(`已取消标记: ${displayName}`);
-          }
-        } catch {
-          toast.error('操作失败');
-        }
+        // Already visited - open sidebar to show record
+        setSidebarOpen(true);
       } else {
-        // Add
+        // Not visited - open dialog to collect info
+        setPendingVisit({ type: 'country', code, name, nameZh });
+        setDialogOpen(true);
+      }
+    },
+    [setSidebarOpen, setPendingVisit, setDialogOpen]
+  );
+
+  // ─── China map click handler ───
+  const handlePlaceClick = useCallback(
+    (name: string, province: string, adcode: string, level: string, lat: number, lng: number) => {
+      const isVisited = useTravelStore.getState().isPlaceVisited(name, province);
+      if (isVisited) {
+        // Already visited - open sidebar to show record
+        setSidebarOpen(true);
+      } else {
+        // Not visited - open dialog to collect info
+        setPendingVisit({ type: 'place', name, province, adcode, level, lat, lng });
+        setDialogOpen(true);
+      }
+    },
+    [setSidebarOpen, setPendingVisit, setDialogOpen]
+  );
+
+  // ─── Dialog confirm handler ───
+  const handleDialogConfirm = useCallback(
+    async (visitedDate: string, note: string) => {
+      if (!pendingVisit) return;
+
+      if (pendingVisit.type === 'country') {
+        const { code, name, nameZh } = pendingVisit;
         const res = await fetch('/api/countries', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code, name, nameZh: nameZh || '' }),
+          body: JSON.stringify({ code, name, nameZh: nameZh || '', visitedDate, note }),
         });
         if (res.ok) {
           const data = await res.json();
           addCountry(data);
-          toast.success(`已标记: ${displayName}`);
+          toast.success(`已标记: ${nameZh || name}`);
         } else {
           const err = await res.json();
           toast.error(err.error || '操作失败');
         }
-      }
-    },
-    [addCountry, removeCountry]
-  );
-
-  // ─── China map toggle ───
-  const handleTogglePlace = useCallback(
-    async (name: string, province: string, adcode: string, level: string, lat: number, lng: number) => {
-      const isVisited = useTravelStore.getState().isPlaceVisited(name, province);
-      console.log('[handleTogglePlace]', { name, province, adcode, level, lat, lng, isVisited });
-      if (isVisited) {
-        // Find and remove
-        const place = places.find((p) => p.name === name && p.province === province);
-        if (place) {
-          try {
-            const res = await fetch(`/api/places/${place.id}`, { method: 'DELETE' });
-            if (res.ok) {
-              removePlace(place.id);
-              toast.success(`已取消标记: ${name}`);
-            }
-          } catch {
-            toast.error('操作失败');
-          }
-        }
       } else {
-        // Add
-        const payload = { name, province, adcode, lat, lng, level };
-        console.log('[handleTogglePlace] POST body:', JSON.stringify(payload));
+        const { name, province, adcode, level, lat, lng } = pendingVisit;
         const res = await fetch('/api/places', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({ name, province, adcode, lat, lng, level, visitedDate, note }),
         });
-        console.log('[handleTogglePlace] response:', res.status);
         if (res.ok) {
           const data = await res.json();
           addPlace(data);
@@ -142,8 +142,53 @@ export default function Home() {
           toast.error(err.error || '操作失败');
         }
       }
+
+      setDialogOpen(false);
+      setPendingVisit(null);
     },
-    [places, addPlace, removePlace]
+    [pendingVisit, addCountry, addPlace, setDialogOpen, setPendingVisit]
+  );
+
+  // ─── Dialog cancel handler ───
+  const handleDialogCancel = useCallback(() => {
+    setDialogOpen(false);
+    setPendingVisit(null);
+  }, [setDialogOpen, setPendingVisit]);
+
+  // ─── Delete country from sidebar ───
+  const handleDeleteCountry = useCallback(
+    async (code: string) => {
+      const country = countries.find((c) => c.code === code);
+      const displayName = country?.nameZh || country?.name || code;
+      try {
+        const res = await fetch(`/api/countries/${code}`, { method: 'DELETE' });
+        if (res.ok) {
+          removeCountry(code);
+          toast.success(`已删除: ${displayName}`);
+        }
+      } catch {
+        toast.error('删除失败');
+      }
+    },
+    [countries, removeCountry]
+  );
+
+  // ─── Delete place from sidebar ───
+  const handleDeletePlace = useCallback(
+    async (id: string) => {
+      const place = places.find((p) => p.id === id);
+      const displayName = place?.name || id;
+      try {
+        const res = await fetch(`/api/places/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          removePlace(id);
+          toast.success(`已删除: ${displayName}`);
+        }
+      } catch {
+        toast.error('删除失败');
+      }
+    },
+    [places, removePlace]
   );
 
   // ─── Bottom nav items ───
@@ -157,9 +202,22 @@ export default function Home() {
   return (
     <div className="h-screen w-screen flex flex-col bg-white dark:bg-neutral-950 overflow-hidden relative">
       {/* ─── Header ─── */}
-      <header className="absolute top-0 left-0 right-0 z-30 px-4 sm:px-6 pt-4 sm:pt-5 flex items-start justify-between pointer-events-none">
+      <header className="absolute top-0 left-0 right-0 z-30 px-4 sm:px-6 pt-10 sm:pt-10 flex items-start justify-between pointer-events-none">
+        {/* Left: Menu button */}
+        <div className="pointer-events-auto">
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="打开记录侧栏"
+            className="h-10 w-10 rounded-xl border-neutral-200 dark:border-neutral-700 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm shadow-sm hover:bg-neutral-50 dark:hover:bg-neutral-800"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <Menu className="h-4 w-4 text-neutral-700 dark:text-neutral-300" />
+          </Button>
+        </div>
+
         {/* Center title */}
-        <div className="pointer-events-none w-full flex justify-center">
+        <div className="pointer-events-none absolute left-0 right-0 flex justify-center top-4 sm:top-5">
           <h1 className="text-xl font-bold text-neutral-900 dark:text-neutral-100 tracking-tight">轨迹记录</h1>
         </div>
 
@@ -202,7 +260,7 @@ export default function Home() {
         >
           <WorldMap
             visitedCountries={countries.map((c) => ({ code: c.code, name: c.name }))}
-            onToggleCountry={handleToggleCountry}
+            onToggleCountry={handleCountryClick}
             isDark={isDark}
             className="w-full h-full"
           />
@@ -223,7 +281,7 @@ export default function Home() {
               adcode: p.adcode,
               level: p.level,
             }))}
-            onTogglePlace={handleTogglePlace}
+            onTogglePlace={handlePlaceClick}
             isDark={isDark}
             className="w-full h-full"
           />
@@ -280,7 +338,24 @@ export default function Home() {
           </div>
         </div>
       </nav>
+
+      {/* ─── Visit Dialog ─── */}
+      <VisitDialog
+        open={dialogOpen}
+        pendingVisit={pendingVisit}
+        onConfirm={handleDialogConfirm}
+        onCancel={handleDialogCancel}
+      />
+
+      {/* ─── Record Sidebar ─── */}
+      <RecordSidebar
+        open={sidebarOpen}
+        countries={countries}
+        places={places}
+        onDeleteCountry={handleDeleteCountry}
+        onDeletePlace={handleDeletePlace}
+        onClose={() => setSidebarOpen(false)}
+      />
     </div>
   );
 }
-

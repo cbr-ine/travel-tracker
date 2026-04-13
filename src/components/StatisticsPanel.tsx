@@ -4,13 +4,17 @@ import { useMemo } from 'react';
 import {
   BarChart3,
   Globe2,
-  Navigation,
   MapPin,
   Calendar,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+
+// ─── Constants ───
+
+const TOTAL_COUNTRIES = 195;
+const TOTAL_CHINA_PROVINCES = 34;
+const TOTAL_CHINA_CITIES = 663;
 
 // ─── Types ───
 
@@ -19,6 +23,8 @@ interface VisitedCountry {
   code: string;
   name: string;
   nameZh: string;
+  visitedDate: string;
+  note: string;
   visitedAt: string;
 }
 
@@ -30,6 +36,8 @@ interface VisitedPlace {
   lat: number;
   lng: number;
   level: string;
+  visitedDate: string;
+  note: string;
   visitedAt: string;
 }
 
@@ -48,17 +56,20 @@ export default function StatisticsPanel({
   isDark = false,
   className = '',
 }: StatisticsPanelProps) {
-  // Province count
+  // Province count (level=province)
   const provinceCount = useMemo(
-    () => new Set(places.filter((p) => p.level === 'province').map((p) => p.adcode)).size,
+    () => places.filter((p) => p.level === 'province').length,
     [places]
   );
 
   // City count (non-province)
   const cityCount = useMemo(
-    () => places.filter((p) => p.level === 'city').length,
+    () => places.filter((p) => p.level !== 'province').length,
     [places]
   );
+
+  // Total place count for city coverage
+  const totalPlaceCount = places.length;
 
   // Most recent countries
   const recentCountries = useMemo(
@@ -83,25 +94,19 @@ export default function StatisticsPanel({
           </div>
 
           {/* Summary cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <StatCard
               icon={<Globe2 className="h-4 w-4" />}
               label="已探索国家"
               value={countries.length.toString()}
-              sub="全球 195 国"
+              sub={`全球 ${TOTAL_COUNTRIES} 国`}
               accent="text-emerald-600"
             />
             <StatCard
-              icon={<Navigation className="h-4 w-4" />}
-              label="已到省份"
-              value={provinceCount.toString()}
-              sub="全国 34 省级行政区"
-              accent="text-amber-600"
-            />
-            <StatCard
               icon={<MapPin className="h-4 w-4" />}
-              label="已到城市"
-              value={cityCount.toString()}
+              label="已到地区"
+              value={totalPlaceCount.toString()}
+              sub={`全国 ${TOTAL_CHINA_CITIES} 城市`}
               accent="text-rose-600"
             />
             <StatCard
@@ -112,34 +117,55 @@ export default function StatisticsPanel({
             />
           </div>
 
-          {/* Coverage progress */}
+          {/* Coverage: Global */}
           <Card className="border-neutral-100 dark:border-neutral-800">
             <CardContent className="p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">全球覆盖率</span>
+                <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">🌍 全球覆盖率</span>
                 <span className="text-sm font-mono text-neutral-500 dark:text-neutral-400">
-                  {countries.length}/195 ({((countries.length / 195) * 100).toFixed(1)}%)
+                  {countries.length}/{TOTAL_COUNTRIES} ({((countries.length / TOTAL_COUNTRIES) * 100).toFixed(1)}%)
+                </span>
+              </div>
+              <div className="h-2 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-500"
+                  style={{ width: `${Math.min((countries.length / TOTAL_COUNTRIES) * 100, 100)}%` }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Coverage: China Provinces */}
+          <Card className="border-neutral-100 dark:border-neutral-800">
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">🇨🇳 省份覆盖率</span>
+                <span className="text-sm font-mono text-neutral-500 dark:text-neutral-400">
+                  {provinceCount}/{TOTAL_CHINA_PROVINCES} ({((provinceCount / TOTAL_CHINA_PROVINCES) * 100).toFixed(1)}%)
                 </span>
               </div>
               <div className="h-2 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-500 transition-all duration-500"
-                  style={{ width: `${Math.min((countries.length / 195) * 100, 100)}%` }}
+                  style={{ width: `${Math.min((provinceCount / TOTAL_CHINA_PROVINCES) * 100, 100)}%` }}
                 />
               </div>
+            </CardContent>
+          </Card>
 
-              <Separator />
-
+          {/* Coverage: China Cities */}
+          <Card className="border-neutral-100 dark:border-neutral-800">
+            <CardContent className="p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">中国覆盖率</span>
+                <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">🏙️ 全国城市覆盖率</span>
                 <span className="text-sm font-mono text-neutral-500 dark:text-neutral-400">
-                  {provinceCount}/34 ({((provinceCount / 34) * 100).toFixed(1)}%)
+                  {totalPlaceCount}/{TOTAL_CHINA_CITIES} ({((totalPlaceCount / TOTAL_CHINA_CITIES) * 100).toFixed(1)}%)
                 </span>
               </div>
               <div className="h-2 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-rose-400 to-rose-500 transition-all duration-500"
-                  style={{ width: `${Math.min((provinceCount / 34) * 100, 100)}%` }}
+                  style={{ width: `${Math.min((totalPlaceCount / TOTAL_CHINA_CITIES) * 100, 100)}%` }}
                 />
               </div>
             </CardContent>
@@ -162,6 +188,9 @@ export default function StatisticsPanel({
                   >
                     <div className="w-2 h-2 rounded-full bg-amber-400" />
                     <span className="text-sm text-neutral-700 dark:text-neutral-300">{c.nameZh || c.name}</span>
+                    {c.visitedDate && (
+                      <span className="text-[10px] text-neutral-400 dark:text-neutral-500">{c.visitedDate}</span>
+                    )}
                   </div>
                 ))}
               </div>
@@ -174,7 +203,7 @@ export default function StatisticsPanel({
               <div className="flex items-center gap-1.5">
                 <MapPin className="h-3.5 w-3.5 text-neutral-400" />
                 <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                  最近到访的城市
+                  最近到访的地区
                 </span>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -187,6 +216,9 @@ export default function StatisticsPanel({
                     <span className="text-sm text-neutral-700 dark:text-neutral-300">
                       {p.province ? `${p.province} · ` : ''}{p.name}
                     </span>
+                    {p.visitedDate && (
+                      <span className="text-[10px] text-neutral-400 dark:text-neutral-500">{p.visitedDate}</span>
+                    )}
                   </div>
                 ))}
               </div>

@@ -8,22 +8,26 @@ datasource db {
 }
 
 model VisitedCountry {
-  id         String   @id @default(cuid())
-  code       String   @unique // ISO 3166-1 alpha-2
-  name       String   // English name
-  nameZh     String   @default("") // Chinese name
-  visitedAt  DateTime @default(now())
+  id          String   @id @default(cuid())
+  code        String   @unique // ISO 3166-1 alpha-2
+  name        String   // English name
+  nameZh      String   @default("") // Chinese name
+  visitedDate String   @default("") // User-specified visit date
+  note        String   @default("") // Notes
+  visitedAt   DateTime @default(now())
 }
 
 model VisitedPlace {
-  id        String   @id @default(cuid())
-  name      String
-  province  String   @default("")
-  adcode    String   @default("") // administrative division code
-  lat       Float    @default(0)
-  lng       Float    @default(0)
-  level     String   @default("city") // "province" or "city"
-  visitedAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  name        String
+  province    String   @default("")
+  adcode      String   @default("") // administrative division code
+  lat         Float    @default(0)
+  lng         Float    @default(0)
+  level       String   @default("city") // "province" or "city"
+  visitedDate String   @default("") // User-specified visit date
+  note        String   @default("") // Notes
+  visitedAt   DateTime @default(now())
 
   @@unique([name, province])
 }

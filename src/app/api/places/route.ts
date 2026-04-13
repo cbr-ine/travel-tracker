@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: '请求体格式错误' }, { status: 400 });
   }
 
-  const { name, province, adcode, lat, lng, level } = body;
+  const { name, province, adcode, lat, lng, level, visitedDate, note } = body;
 
   console.log('[POST /api/places] body:', JSON.stringify(body));
 
@@ -46,6 +46,8 @@ export async function POST(request: Request) {
         lat: typeof lat === 'number' ? lat : 0,
         lng: typeof lng === 'number' ? lng : 0,
         level: (typeof level === 'string' ? level : 'city').trim(),
+        visitedDate: String(visitedDate || ''),
+        note: String(note || ''),
       },
     });
     return NextResponse.json(place, { status: 201 });
